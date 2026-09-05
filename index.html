@@ -11,13 +11,13 @@
     color: #F5EFE6;
     font-family: -apple-system, sans-serif;
     margin: 0;
-    padding: 30px 20px;
+    padding: 20px 20px 60px;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
   .num { font-size: 48px; color: #E8A33D; text-align: center; }
-  .sub { text-align: center; color: #8A7690; font-size: 13px; margin-bottom: 24px; }
+  .sub { text-align: center; color: #8A7690; font-size: 13px; margin-bottom: 20px; }
   .card {
     background: #2C1E30;
     border-radius: 16px;
@@ -31,34 +31,41 @@
   .tz-place { color: #8A7690; font-size: 11px; }
   .tz-time { font-size: 18px; }
   .mood-row { display: flex; justify-content: space-between; margin-top: 10px; }
-  .mood-btn {
-    background: none;
-    border: none;
-    font-size: 22px;
-    cursor: pointer;
-    opacity: 0.6;
-  }
+  .mood-btn { background: none; border: none; font-size: 22px; cursor: pointer; opacity: 0.6; }
   .mood-btn.active { opacity: 1; transform: scale(1.2); }
   #status { text-align: center; color: #8A7690; font-size: 12px; margin-top: 10px; }
   .wish-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid rgba(245,239,230,0.1); }
   .wish-input-row { display:flex; gap:8px; margin-top:10px; }
-  .wish-input-row input {
+  .wish-input-row input, .compose-row input {
     flex:1; background:#1F1522; border:1px solid #8A7690; border-radius:8px; padding:8px; color:#F5EFE6;
   }
-  .wish-input-row button {
+  .wish-input-row button, .compose-row button, .hug-btn, .who-btn {
     background:#E8A33D; border:none; border-radius:8px; padding:8px 14px; color:#2C1E30; font-weight:600; cursor:pointer;
   }
+  .who-bar { display:flex; gap:8px; margin-bottom:16px; }
+  .who-btn.inactive { background:#2C1E30; color:#8A7690; }
+  .hug-btn { width:100%; background:#F2B8C6; color:#3A1F26; font-size:14px; padding:12px; }
+  .chat-box { display:flex; flex-direction:column; max-height:260px; overflow-y:auto; margin-bottom:10px; }
+  .bubble { max-width:75%; padding:8px 12px; border-radius:14px; font-size:13px; margin-bottom:6px; }
+  .bubble.me { align-self:flex-end; background:#E8A33D; color:#2C1E30; }
+  .bubble.them { align-self:flex-start; background:#1F1522; }
+  .compose-row { display:flex; gap:8px; }
 </style>
 </head>
 <body>
+
+<div class="who-bar">
+  <button class="who-btn" id="whoIsreal">I'm Isreal</button>
+  <button class="who-btn inactive" id="whoFavour">I'm Favour</button>
+</div>
 
 <div class="num" id="dayCount">--</div>
 <div class="sub">days together</div>
 
 <div class="card">
   <div class="tz-row">
-    <div><span class="tz-place">You (Lagos)</span><span class="tz-time" id="timeLagos">--:--</span></div>
-    <div><span class="tz-place">Favour</span><span class="tz-time" id="timeHer">--:--</span></div>
+    <div><span class="tz-place">You</span><span class="tz-time" id="timeLagos">--:--</span></div>
+    <div><span class="tz-place">Partner</span><span class="tz-time" id="timeHer">--:--</span></div>
   </div>
 </div>
 
@@ -74,6 +81,19 @@
 </div>
 
 <div class="card">
+  <button class="hug-btn" id="hugBtn">🤗 send a hug</button>
+</div>
+
+<div class="card">
+  <div style="color:#8A7690; font-size:12px; margin-bottom:10px;">notes</div>
+  <div id="chatBox" class="chat-box"></div>
+  <div class="compose-row">
+    <input id="chatInput" type="text" placeholder="write something...">
+    <button id="sendChatBtn">send</button>
+  </div>
+</div>
+
+<div class="card">
   <div style="color:#8A7690; font-size:12px; margin-bottom:10px;">things to do when we meet</div>
   <div id="wishlist"></div>
   <div class="wish-input-row">
@@ -85,42 +105,77 @@
 <div id="status"></div>
 
 <script>
-  // ---- SETUP ----
   const SUPABASE_URL = "https://oewhhcleehkhjjyliivb.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ld2hoY2xlZWhraGpqeWxpaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MTUwOTIsImV4cCI6MjEwNDE5MTA5Mn0.3IYP_WYYniWFdwwfq9dWJHMLCDUicsnTONUn_uOCgpg";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // Who is using the app right now — change this to "favour" on her version
-  const CURRENT_USER = "isreal";
+  // ---- Who am I? saved on this device only ----
+  let CURRENT_USER = localStorage.getItem("us_app_user") || "isreal";
+  function setUser(user) {
+    CURRENT_USER = user;
+    localStorage.setItem("us_app_user", user);
+    document.getElementById("whoIsreal").classList.toggle("inactive", user !== "isreal");
+    document.getElementById("whoFavour").classList.toggle("inactive", user !== "favour");
+    loadChat();
+  }
+  document.getElementById("whoIsreal").addEventListener("click", () => setUser("isreal"));
+  document.getElementById("whoFavour").addEventListener("click", () => setUser("favour"));
 
-  // ---- Days together counter ----
+  // ---- Days together ----
   async function loadDayCount() {
     const { data, error } = await sb.from("couple_info").select("start_date").limit(1).single();
-    if (error || !data) { console.error("couple_info error:", error); return; }
+    if (error || !data) return;
     const start = new Date(data.start_date);
-    const today = new Date();
-    const diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor((new Date() - start) / (1000 * 60 * 60 * 24));
     document.getElementById("dayCount").textContent = diffDays;
   }
 
-  // ---- Time zones ----
+  // ---- Clocks (both Lagos) ----
   function updateClocks() {
     const now = new Date();
-    document.getElementById("timeLagos").textContent =
-      now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" });
-    document.getElementById("timeHer").textContent =
-      now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" });
+    const t = now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" });
+    document.getElementById("timeLagos").textContent = t;
+    document.getElementById("timeHer").textContent = t;
   }
 
-  // ---- Mood check-in ----
+  // ---- Mood ----
   document.querySelectorAll(".mood-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
       document.querySelectorAll(".mood-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      const mood = btn.dataset.mood;
-      const { error } = await sb.from("mood_entries").insert({ sender: CURRENT_USER, mood: mood });
+      const { error } = await sb.from("mood_entries").insert({ sender: CURRENT_USER, mood: btn.dataset.mood });
       document.getElementById("status").textContent = error ? "Something went wrong" : "Mood saved ✓";
     });
+  });
+
+  // ---- Hug ----
+  document.getElementById("hugBtn").addEventListener("click", async () => {
+    const { error } = await sb.from("hugs").insert({ sender: CURRENT_USER });
+    document.getElementById("status").textContent = error ? "Something went wrong" : "Hug sent 🤗";
+  });
+
+  // ---- Chat ----
+  async function loadChat() {
+    const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: true });
+    if (error) { console.error("chat load error:", error); return; }
+    const box = document.getElementById("chatBox");
+    box.innerHTML = "";
+    data.forEach(msg => {
+      const b = document.createElement("div");
+      b.className = "bubble " + (msg.sender === CURRENT_USER ? "me" : "them");
+      b.textContent = msg.text_body || "";
+      box.appendChild(b);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  document.getElementById("sendChatBtn").addEventListener("click", async () => {
+    const input = document.getElementById("chatInput");
+    const text = input.value.trim();
+    if (!text) return;
+    await sb.from("messages").insert({ sender: CURRENT_USER, type: "text", text_body: text });
+    input.value = "";
+    loadChat();
   });
 
   // ---- Wishlist ----
@@ -155,9 +210,12 @@
     loadWishlist();
   });
 
+  // ---- Init ----
+  setUser(CURRENT_USER);
   loadDayCount();
   updateClocks();
   setInterval(updateClocks, 1000);
+  setInterval(loadChat, 4000); // refresh chat every 4s so both sides see new messages
   loadWishlist();
 </script>
 
