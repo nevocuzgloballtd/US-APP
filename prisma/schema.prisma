@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  timezone     String   @default("Africa/Lagos")
+  createdAt    DateTime @default(now())
+
+  sentMessages  Message[]      @relation("SentMessages")
+  moodEntries   MoodEntry[]
+  wishlistAdded WishlistItem[] @relation("WishlistAddedBy")
+  hugsSent      Hug[]          @relation("HugsSent")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  type       String   // "text" or "sketch"
+  textBody   String?
+  sketchData String?  // JSON string of stroke points, used when type = "sketch"
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model MoodEntry {
+  id        String   @id @default(cuid())
+  mood      String
+  note      String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model WishlistItem {
+  id          String    @id @default(cuid())
+  text        String
+  done        Boolean   @default(false)
+  addedById   String
+  addedBy     User      @relation("WishlistAddedBy", fields: [addedById], references: [id])
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+}
+
+model Hug {
+  id        String   @id @default(cuid())
+  senderId  String
+  sender    User     @relation("HugsSent", fields: [senderId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Couple {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  createdAt DateTime @default(now())
+}
