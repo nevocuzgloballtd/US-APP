@@ -7,25 +7,12 @@
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   body {
-    background: #1F1522;
-    color: #F5EFE6;
-    font-family: -apple-system, sans-serif;
-    margin: 0;
-    padding: 20px 20px 60px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    background: #1F1522; color: #F5EFE6; font-family: -apple-system, sans-serif;
+    margin: 0; padding: 20px 20px 60px; display: flex; flex-direction: column; align-items: center;
   }
   .num { font-size: 48px; color: #E8A33D; text-align: center; }
   .sub { text-align: center; color: #8A7690; font-size: 13px; margin-bottom: 20px; }
-  .card {
-    background: #2C1E30;
-    border-radius: 16px;
-    padding: 16px;
-    width: 100%;
-    max-width: 340px;
-    margin-bottom: 16px;
-  }
+  .card { background: #2C1E30; border-radius: 16px; padding: 16px; width: 100%; max-width: 340px; margin-bottom: 16px; }
   .tz-row { display: flex; justify-content: space-around; text-align: center; }
   .tz-row div span { display: block; }
   .tz-place { color: #8A7690; font-size: 11px; }
@@ -39,7 +26,7 @@
   .wish-input-row input, .compose-row input {
     flex:1; background:#1F1522; border:1px solid #8A7690; border-radius:8px; padding:8px; color:#F5EFE6;
   }
-  .wish-input-row button, .compose-row button, .hug-btn, .who-btn {
+  .wish-input-row button, .compose-row button, .hug-btn, .who-btn, .sketch-btn {
     background:#E8A33D; border:none; border-radius:8px; padding:8px 14px; color:#2C1E30; font-weight:600; cursor:pointer;
   }
   .who-bar { display:flex; gap:8px; margin-bottom:16px; }
@@ -49,7 +36,16 @@
   .bubble { max-width:75%; padding:8px 12px; border-radius:14px; font-size:13px; margin-bottom:6px; }
   .bubble.me { align-self:flex-end; background:#E8A33D; color:#2C1E30; }
   .bubble.them { align-self:flex-start; background:#1F1522; }
+  .bubble img { display:block; max-width:160px; border-radius:8px; }
   .compose-row { display:flex; gap:8px; }
+  .sketch-modal {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:50;
+    flex-direction:column; align-items:center; justify-content:center; padding:20px;
+  }
+  .sketch-modal.open { display:flex; }
+  #sketchCanvas { background:#F5EFE6; border-radius:12px; touch-action:none; }
+  .sketch-controls { display:flex; gap:10px; margin-top:14px; }
+  .sketch-controls button { padding:10px 16px; border:none; border-radius:8px; font-weight:600; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -88,6 +84,7 @@
   <div style="color:#8A7690; font-size:12px; margin-bottom:10px;">notes</div>
   <div id="chatBox" class="chat-box"></div>
   <div class="compose-row">
+    <button class="sketch-btn" id="openSketchBtn">✎</button>
     <input id="chatInput" type="text" placeholder="write something...">
     <button id="sendChatBtn">send</button>
   </div>
@@ -104,12 +101,21 @@
 
 <div id="status"></div>
 
+<!-- Sketch modal -->
+<div class="sketch-modal" id="sketchModal">
+  <canvas id="sketchCanvas" width="280" height="360"></canvas>
+  <div class="sketch-controls">
+    <button id="clearSketchBtn" style="background:#8A7690; color:#fff;">clear</button>
+    <button id="cancelSketchBtn" style="background:#2C1E30; color:#F5EFE6;">cancel</button>
+    <button id="sendSketchBtn" style="background:#E8A33D; color:#2C1E30;">send</button>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL = "https://oewhhcleehkhjjyliivb.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ld2hoY2xlZWhraGpqeWxpaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MTUwOTIsImV4cCI6MjEwNDE5MTA5Mn0.3IYP_WYYniWFdwwfq9dWJHMLCDUicsnTONUn_uOCgpg";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // ---- Who am I? saved on this device only ----
   let CURRENT_USER = localStorage.getItem("us_app_user") || "isreal";
   function setUser(user) {
     CURRENT_USER = user;
@@ -121,49 +127,54 @@
   document.getElementById("whoIsreal").addEventListener("click", () => setUser("isreal"));
   document.getElementById("whoFavour").addEventListener("click", () => setUser("favour"));
 
-  // ---- Days together ----
   async function loadDayCount() {
     const { data, error } = await sb.from("couple_info").select("start_date").limit(1).single();
     if (error || !data) return;
     const start = new Date(data.start_date);
-    const diffDays = Math.floor((new Date() - start) / (1000 * 60 * 60 * 24));
-    document.getElementById("dayCount").textContent = diffDays;
+    document.getElementById("dayCount").textContent = Math.floor((new Date() - start) / 86400000);
   }
 
-  // ---- Clocks (both Lagos) ----
   function updateClocks() {
-    const now = new Date();
-    const t = now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" });
+    const t = new Date().toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" });
     document.getElementById("timeLagos").textContent = t;
     document.getElementById("timeHer").textContent = t;
   }
 
-  // ---- Mood ----
   document.querySelectorAll(".mood-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
       document.querySelectorAll(".mood-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      const { error } = await sb.from("mood_entries").insert({ sender: CURRENT_USER, mood: btn.dataset.mood });
-      document.getElementById("status").textContent = error ? "Something went wrong" : "Mood saved ✓";
+      await sb.from("mood_entries").insert({ sender: CURRENT_USER, mood: btn.dataset.mood });
+      document.getElementById("status").textContent = "Mood saved ✓";
     });
   });
 
-  // ---- Hug ----
+  // ---- Hug (fixed with visible feedback) ----
   document.getElementById("hugBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("hugBtn");
+    const original = btn.textContent;
+    btn.textContent = "sending..."; btn.disabled = true;
     const { error } = await sb.from("hugs").insert({ sender: CURRENT_USER });
-    document.getElementById("status").textContent = error ? "Something went wrong" : "Hug sent 🤗";
+    btn.textContent = error ? "❌ try again" : "🤗 hug sent!";
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2000);
   });
 
-  // ---- Chat ----
+  // ---- Chat (text + sketch) ----
   async function loadChat() {
     const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: true });
-    if (error) { console.error("chat load error:", error); return; }
+    if (error) return;
     const box = document.getElementById("chatBox");
     box.innerHTML = "";
     data.forEach(msg => {
       const b = document.createElement("div");
       b.className = "bubble " + (msg.sender === CURRENT_USER ? "me" : "them");
-      b.textContent = msg.text_body || "";
+      if (msg.type === "sketch" && msg.sketch_data) {
+        const img = document.createElement("img");
+        img.src = msg.sketch_data;
+        b.appendChild(img);
+      } else {
+        b.textContent = msg.text_body || "";
+      }
       box.appendChild(b);
     });
     box.scrollTop = box.scrollHeight;
@@ -178,19 +189,60 @@
     loadChat();
   });
 
+  // ---- Sketch canvas ----
+  const modal = document.getElementById("sketchModal");
+  const canvas = document.getElementById("sketchCanvas");
+  const ctx = canvas.getContext("2d");
+  let drawing = false;
+
+  function startDraw(x, y) { drawing = true; ctx.beginPath(); ctx.moveTo(x, y); }
+  function draw(x, y) {
+    if (!drawing) return;
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = "#2C1E30";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.stroke();
+  }
+  function stopDraw() { drawing = false; }
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+  canvas.addEventListener("mousedown", e => { const p = getPos(e); startDraw(p.x, p.y); });
+  canvas.addEventListener("mousemove", e => { const p = getPos(e); draw(p.x, p.y); });
+  canvas.addEventListener("mouseup", stopDraw);
+  canvas.addEventListener("touchstart", e => { e.preventDefault(); const p = getPos(e); startDraw(p.x, p.y); });
+  canvas.addEventListener("touchmove", e => { e.preventDefault(); const p = getPos(e); draw(p.x, p.y); });
+  canvas.addEventListener("touchend", stopDraw);
+
+  function clearCanvas() { ctx.fillStyle = "#F5EFE6"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+
+  document.getElementById("openSketchBtn").addEventListener("click", () => {
+    clearCanvas();
+    modal.classList.add("open");
+  });
+  document.getElementById("cancelSketchBtn").addEventListener("click", () => modal.classList.remove("open"));
+  document.getElementById("clearSketchBtn").addEventListener("click", clearCanvas);
+  document.getElementById("sendSketchBtn").addEventListener("click", async () => {
+    const dataUrl = canvas.toDataURL("image/png");
+    await sb.from("messages").insert({ sender: CURRENT_USER, type: "sketch", sketch_data: dataUrl });
+    modal.classList.remove("open");
+    loadChat();
+  });
+
   // ---- Wishlist ----
   async function loadWishlist() {
     const { data, error } = await sb.from("wishlist_items").select("*").order("created_at", { ascending: true });
-    if (error) { console.error("wishlist load error:", error); return; }
+    if (error) return;
     const container = document.getElementById("wishlist");
     container.innerHTML = "";
     data.forEach(item => {
       const row = document.createElement("div");
       row.className = "wish-row";
-      row.innerHTML = `
-        <input type="checkbox" ${item.done ? "checked" : ""} data-id="${item.id}" class="wish-check">
-        <span style="font-size:13px; ${item.done ? "text-decoration:line-through; color:#8A7690;" : ""}">${item.text}</span>
-      `;
+      row.innerHTML = `<input type="checkbox" ${item.done ? "checked" : ""} data-id="${item.id}" class="wish-check">
+        <span style="font-size:13px; ${item.done ? "text-decoration:line-through; color:#8A7690;" : ""}">${item.text}</span>`;
       container.appendChild(row);
     });
     document.querySelectorAll(".wish-check").forEach(cb => {
@@ -200,7 +252,6 @@
       });
     });
   }
-
   document.getElementById("addWishBtn").addEventListener("click", async () => {
     const input = document.getElementById("newWishInput");
     const text = input.value.trim();
@@ -210,12 +261,11 @@
     loadWishlist();
   });
 
-  // ---- Init ----
   setUser(CURRENT_USER);
   loadDayCount();
   updateClocks();
   setInterval(updateClocks, 1000);
-  setInterval(loadChat, 4000); // refresh chat every 4s so both sides see new messages
+  setInterval(loadChat, 4000);
   loadWishlist();
 </script>
 
