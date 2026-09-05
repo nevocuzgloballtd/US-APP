@@ -267,6 +267,32 @@
   setInterval(updateClocks, 1000);
   setInterval(loadChat, 4000);
   loadWishlist();
+    // ---- Hug receiver: check for new hugs from the other person ----
+  let lastSeenHugTime = new Date().toISOString();
+  async function checkForHugs() {
+    const { data, error } = await sb.from("hugs")
+      .select("*")
+      .neq("sender", CURRENT_USER)
+      .gt("created_at", lastSeenHugTime)
+      .order("created_at", { ascending: false });
+    if (error || !data || data.length === 0) return;
+    lastSeenHugTime = new Date().toISOString();
+    showHugBanner();
+  }
+
+  function showHugBanner() {
+    const banner = document.createElement("div");
+    banner.textContent = "🤗 you've been hugged!";
+    banner.style.cssText = `
+      position:fixed; top:20px; left:50%; transform:translateX(-50%);
+      background:#F2B8C6; color:#3A1F26; padding:14px 22px; border-radius:14px;
+      font-weight:600; z-index:100; box-shadow:0 8px 20px rgba(0,0,0,0.3);
+    `;
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 4000);
+  }
+
+  setInterval(checkForHugs, 4000);
 </script>
 
 </body>
