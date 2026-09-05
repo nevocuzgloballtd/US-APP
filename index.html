@@ -68,25 +68,28 @@
 <div id="status"></div>
 
 <script>
-  // ---- SETUP: paste your real values here ----
+  // ---- SETUP ----
   const SUPABASE_URL = "https://oewhhcleehkhjjyliivb.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ld2hoY2xlZWhraGpqeWxpaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MTUwOTIsImV4cCI6MjEwNDE5MTA5Mn0.3IYP_WYYniWFdwwfq9dWJHMLCDUicsnTONUn_uOCgpg";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // Who is using the app right now — change this to "favour" on her version
   const CURRENT_USER = "isreal";
 
   // ---- Days together counter ----
   async function loadDayCount() {
-    const { data, error } = await supabase.from("couple_info").select("start_date").limit(1).single();
-    if (error || !data) return;
+    const { data, error } = await sb.from("couple_info").select("start_date").limit(1).single();
+    if (error || !data) {
+      console.error("couple_info error:", error);
+      return;
+    }
     const start = new Date(data.start_date);
     const today = new Date();
     const diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24));
     document.getElementById("dayCount").textContent = diffDays;
   }
 
-  // ---- Time zones (basic clock, updates every second) ----
+  // ---- Time zones (updates every second) ----
   function updateClocks() {
     const now = new Date();
     document.getElementById("timeLagos").textContent =
@@ -102,7 +105,7 @@
       document.querySelectorAll(".mood-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       const mood = btn.dataset.mood;
-      const { error } = await supabase.from("mood_entries").insert({ sender: CURRENT_USER, mood: mood });
+      const { error } = await sb.from("mood_entries").insert({ sender: CURRENT_USER, mood: mood });
       document.getElementById("status").textContent = error ? "Something went wrong" : "Mood saved ✓";
     });
   });
