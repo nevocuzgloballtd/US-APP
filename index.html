@@ -67,6 +67,7 @@
 
 <div class="card">
   <div style="color:#8A7690; font-size:12px;">how are you feeling right now?</div>
+  <div id="partnerMood" style="color:#F2B8C6; font-size:12px; margin-top:6px;"></div>
   <div class="mood-row">
     <button class="mood-btn" data-mood="sad">😔</button>
     <button class="mood-btn" data-mood="neutral">😐</button>
@@ -123,6 +124,7 @@
     document.getElementById("whoIsreal").classList.toggle("inactive", user !== "isreal");
     document.getElementById("whoFavour").classList.toggle("inactive", user !== "favour");
     loadChat();
+    loadPartnerMood();
   }
   document.getElementById("whoIsreal").addEventListener("click", () => setUser("isreal"));
   document.getElementById("whoFavour").addEventListener("click", () => setUser("favour"));
@@ -149,7 +151,21 @@
     });
   });
 
-  // ---- Hug (fixed with visible feedback) ----
+  // ---- Partner's latest mood ----
+  async function loadPartnerMood() {
+    const { data, error } = await sb.from("mood_entries")
+      .select("*")
+      .neq("sender", CURRENT_USER)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (error || !data || data.length === 0) return;
+    const moodEmoji = { sad: "😔", neutral: "😐", happy: "🙂", loved: "😍", tired: "😴" };
+    const partnerName = CURRENT_USER === "isreal" ? "Favour" : "Isreal";
+    document.getElementById("partnerMood").textContent =
+      `${partnerName} is feeling ${moodEmoji[data[0].mood] || data[0].mood}`;
+  }
+
+  // ---- Hug ----
   document.getElementById("hugBtn").addEventListener("click", async () => {
     const btn = document.getElementById("hugBtn");
     const original = btn.textContent;
@@ -261,13 +277,7 @@
     loadWishlist();
   });
 
-  setUser(CURRENT_USER);
-  loadDayCount();
-  updateClocks();
-  setInterval(updateClocks, 1000);
-  setInterval(loadChat, 4000);
-  loadWishlist();
-    // ---- Hug receiver: check for new hugs from the other person ----
+  // ---- Hug receiver ----
   let lastSeenHugTime = new Date().toISOString();
   async function checkForHugs() {
     const { data, error } = await sb.from("hugs")
@@ -292,7 +302,15 @@
     setTimeout(() => banner.remove(), 4000);
   }
 
+  // ---- Init ----
+  setUser(CURRENT_USER);
+  loadDayCount();
+  updateClocks();
+  setInterval(updateClocks, 1000);
+  setInterval(loadChat, 4000);
+  setInterval(loadPartnerMood, 4000);
   setInterval(checkForHugs, 4000);
+  loadWishlist();
 </script>
 
 </body>
