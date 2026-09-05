@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Us</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  body {
+    background: #1F1522;
+    color: #F5EFE6;
+    font-family: -apple-system, sans-serif;
+    margin: 0;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .num { font-size: 48px; color: #E8A33D; text-align: center; }
+  .sub { text-align: center; color: #8A7690; font-size: 13px; margin-bottom: 24px; }
+  .card {
+    background: #2C1E30;
+    border-radius: 16px;
+    padding: 16px;
+    width: 100%;
+    max-width: 340px;
+    margin-bottom: 16px;
+  }
+  .tz-row { display: flex; justify-content: space-around; text-align: center; }
+  .tz-row div span { display: block; }
+  .tz-place { color: #8A7690; font-size: 11px; }
+  .tz-time { font-size: 18px; }
+  .mood-row { display: flex; justify-content: space-between; margin-top: 10px; }
+  .mood-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    opacity: 0.6;
+  }
+  .mood-btn.active { opacity: 1; transform: scale(1.2); }
+  #status { text-align: center; color: #8A7690; font-size: 12px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="num" id="dayCount">--</div>
+<div class="sub">days together</div>
+
+<div class="card">
+  <div class="tz-row">
+    <div><span class="tz-place">You (Lagos)</span><span class="tz-time" id="timeLagos">--:--</span></div>
+    <div><span class="tz-place">Favour</span><span class="tz-time" id="timeHer">--:--</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <div style="color:#8A7690; font-size:12px;">how are you feeling right now?</div>
+  <div class="mood-row">
+    <button class="mood-btn" data-mood="sad">😔</button>
+    <button class="mood-btn" data-mood="neutral">😐</button>
+    <button class="mood-btn" data-mood="happy">🙂</button>
+    <button class="mood-btn" data-mood="loved">😍</button>
+    <button class="mood-btn" data-mood="tired">😴</button>
+  </div>
+</div>
+
+<div id="status"></div>
+
+<script>
+  // ---- SETUP: paste your real values here ----
+  const SUPABASE_URL = "https://oewhhcleehkhjjyliivb.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ld2hoY2xlZWhraGpqeWxpaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MTUwOTIsImV4cCI6MjEwNDE5MTA5Mn0.3IYP_WYYniWFdwwfq9dWJHMLCDUicsnTONUn_uOCgpg";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Who is using the app right now — change this to "favour" on her version
+  const CURRENT_USER = "isreal";
+
+  // ---- Days together counter ----
+  async function loadDayCount() {
+    const { data, error } = await supabase.from("couple_info").select("start_date").limit(1).single();
+    if (error || !data) return;
+    const start = new Date(data.start_date);
+    const today = new Date();
+    const diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    document.getElementById("dayCount").textContent = diffDays;
+  }
+
+  // ---- Time zones (basic clock, updates every second) ----
+  function updateClocks() {
+    const now = new Date();
+    document.getElementById("timeLagos").textContent =
+      now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" });
+    // Change "America/Chicago" to Favour's actual time zone once you know it
+    document.getElementById("timeHer").textContent =
+      now.toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit" });
+  }
+
+  // ---- Mood check-in ----
+  document.querySelectorAll(".mood-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      document.querySelectorAll(".mood-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const mood = btn.dataset.mood;
+      const { error } = await supabase.from("mood_entries").insert({ sender: CURRENT_USER, mood: mood });
+      document.getElementById("status").textContent = error ? "Something went wrong" : "Mood saved ✓";
+    });
+  });
+
+  loadDayCount();
+  updateClocks();
+  setInterval(updateClocks, 1000);
+</script>
+
+</body>
+</html>
