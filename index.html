@@ -40,6 +40,14 @@
   }
   .mood-btn.active { opacity: 1; transform: scale(1.2); }
   #status { text-align: center; color: #8A7690; font-size: 12px; margin-top: 10px; }
+  .wish-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid rgba(245,239,230,0.1); }
+  .wish-input-row { display:flex; gap:8px; margin-top:10px; }
+  .wish-input-row input {
+    flex:1; background:#1F1522; border:1px solid #8A7690; border-radius:8px; padding:8px; color:#F5EFE6;
+  }
+  .wish-input-row button {
+    background:#E8A33D; border:none; border-radius:8px; padding:8px 14px; color:#2C1E30; font-weight:600; cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -65,6 +73,15 @@
   </div>
 </div>
 
+<div class="card">
+  <div style="color:#8A7690; font-size:12px; margin-bottom:10px;">things to do when we meet</div>
+  <div id="wishlist"></div>
+  <div class="wish-input-row">
+    <input id="newWishInput" type="text" placeholder="add something...">
+    <button id="addWishBtn">add</button>
+  </div>
+</div>
+
 <div id="status"></div>
 
 <script>
@@ -79,24 +96,20 @@
   // ---- Days together counter ----
   async function loadDayCount() {
     const { data, error } = await sb.from("couple_info").select("start_date").limit(1).single();
-    if (error || !data) {
-      console.error("couple_info error:", error);
-      return;
-    }
+    if (error || !data) { console.error("couple_info error:", error); return; }
     const start = new Date(data.start_date);
     const today = new Date();
     const diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24));
     document.getElementById("dayCount").textContent = diffDays;
   }
 
-  // ---- Time zones (updates every second) ----
+  // ---- Time zones ----
   function updateClocks() {
     const now = new Date();
     document.getElementById("timeLagos").textContent =
       now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" });
-    // Change "America/Chicago" to Favour's actual time zone once you know it
     document.getElementById("timeHer").textContent =
-  now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" });
+      now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" });
   }
 
   // ---- Mood check-in ----
@@ -110,9 +123,42 @@
     });
   });
 
+  // ---- Wishlist ----
+  async function loadWishlist() {
+    const { data, error } = await sb.from("wishlist_items").select("*").order("created_at", { ascending: true });
+    if (error) { console.error("wishlist load error:", error); return; }
+    const container = document.getElementById("wishlist");
+    container.innerHTML = "";
+    data.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "wish-row";
+      row.innerHTML = `
+        <input type="checkbox" ${item.done ? "checked" : ""} data-id="${item.id}" class="wish-check">
+        <span style="font-size:13px; ${item.done ? "text-decoration:line-through; color:#8A7690;" : ""}">${item.text}</span>
+      `;
+      container.appendChild(row);
+    });
+    document.querySelectorAll(".wish-check").forEach(cb => {
+      cb.addEventListener("change", async (e) => {
+        await sb.from("wishlist_items").update({ done: e.target.checked }).eq("id", e.target.dataset.id);
+        loadWishlist();
+      });
+    });
+  }
+
+  document.getElementById("addWishBtn").addEventListener("click", async () => {
+    const input = document.getElementById("newWishInput");
+    const text = input.value.trim();
+    if (!text) return;
+    await sb.from("wishlist_items").insert({ text: text, added_by: CURRENT_USER });
+    input.value = "";
+    loadWishlist();
+  });
+
   loadDayCount();
   updateClocks();
   setInterval(updateClocks, 1000);
+  loadWishlist();
 </script>
 
 </body>
