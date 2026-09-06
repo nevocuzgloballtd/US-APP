@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Us</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#E8A33D">
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   body {
@@ -151,7 +153,6 @@
     });
   });
 
-  // ---- Partner's latest mood ----
   async function loadPartnerMood() {
     const { data, error } = await sb.from("mood_entries")
       .select("*")
@@ -165,7 +166,6 @@
       `${partnerName} is feeling ${moodEmoji[data[0].mood] || data[0].mood}`;
   }
 
-  // ---- Hug ----
   document.getElementById("hugBtn").addEventListener("click", async () => {
     const btn = document.getElementById("hugBtn");
     const original = btn.textContent;
@@ -175,7 +175,6 @@
     setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2000);
   });
 
-  // ---- Chat (text + sketch) ----
   async function loadChat() {
     const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: true });
     if (error) return;
@@ -205,7 +204,6 @@
     loadChat();
   });
 
-  // ---- Sketch canvas ----
   const modal = document.getElementById("sketchModal");
   const canvas = document.getElementById("sketchCanvas");
   const ctx = canvas.getContext("2d");
@@ -248,7 +246,6 @@
     loadChat();
   });
 
-  // ---- Wishlist ----
   async function loadWishlist() {
     const { data, error } = await sb.from("wishlist_items").select("*").order("created_at", { ascending: true });
     if (error) return;
@@ -277,7 +274,6 @@
     loadWishlist();
   });
 
-  // ---- Hug receiver ----
   let lastSeenHugTime = new Date().toISOString();
   async function checkForHugs() {
     const { data, error } = await sb.from("hugs")
@@ -302,7 +298,6 @@
     setTimeout(() => banner.remove(), 4000);
   }
 
-  // ---- Init ----
   setUser(CURRENT_USER);
   loadDayCount();
   updateClocks();
@@ -311,6 +306,10 @@
   setInterval(loadPartnerMood, 4000);
   setInterval(checkForHugs, 4000);
   loadWishlist();
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
+  }
 </script>
 
 </body>
