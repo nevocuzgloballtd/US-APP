@@ -12,87 +12,67 @@
   body {
     background: #1F1522; color: #F5EFE6;
     font-family: -apple-system, "Segoe UI", sans-serif;
-    margin: 0; padding: 0 0 76px 0;
-    min-height: 100vh;
+    margin: 0; padding: 0 0 76px 0; min-height: 100vh;
   }
   .screen { display: none; padding: 28px 20px 20px; max-width: 420px; margin: 0 auto; }
   .screen.active { display: block; }
-
-  .app-title {
-    font-family: Georgia, "Iowan Old Style", serif;
-    font-size: 26px; text-align: center; color: #F5EFE6; margin: 0;
-  }
-  .app-subtitle {
-    text-align: center; color: #8A7690; font-size: 12px; margin-top: 4px; margin-bottom: 24px;
-    font-style: italic;
-  }
-
+  .app-title { font-family: Georgia, serif; font-size: 26px; text-align: center; margin: 0; }
+  .app-subtitle { text-align: center; color: #8A7690; font-size: 12px; margin-top: 4px; margin-bottom: 24px; font-style: italic; }
   .num { font-size: 52px; color: #E8A33D; text-align: center; font-family: Georgia, serif; line-height: 1; }
   .sub { text-align: center; color: #8A7690; font-size: 12px; margin-top: 6px; margin-bottom: 22px; letter-spacing: 0.5px; }
-
   .card { background: #2C1E30; border-radius: 18px; padding: 18px; margin-bottom: 16px; }
   .card-title { color: #8A7690; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; }
-
   .tz-row { display: flex; justify-content: space-around; text-align: center; }
   .tz-row div span { display: block; }
   .tz-place { color: #8A7690; font-size: 11px; margin-bottom: 2px; }
   .tz-time { font-size: 20px; font-family: Georgia, serif; }
-
   .partner-mood { color: #F2B8C6; font-size: 13px; margin-bottom: 12px; min-height: 16px; }
   .mood-row { display: flex; justify-content: space-between; }
   .mood-btn { background: none; border: none; font-size: 26px; cursor: pointer; opacity: 0.55; transition: 0.15s; padding: 4px; }
   .mood-btn.active { opacity: 1; transform: scale(1.25); }
-
-  .hug-btn {
-    width: 100%; background: #F2B8C6; color: #3A1F26; border: none;
-    padding: 16px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer;
-  }
-
+  .hug-btn { width: 100%; background: #F2B8C6; color: #3A1F26; border: none; padding: 16px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .surprise-btn { width: 100%; background: linear-gradient(135deg,#E8A33D,#F2B8C6); color: #2C1E30; border: none; padding: 16px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; }
   .who-bar { display: flex; gap: 8px; padding: 14px 20px 0; max-width: 420px; margin: 0 auto; }
-  .who-btn {
-    flex: 1; background: #E8A33D; border: none; border-radius: 10px; padding: 8px; font-size: 12px;
-    font-weight: 600; color: #2C1E30; cursor: pointer;
-  }
+  .who-btn { flex: 1; background: #E8A33D; border: none; border-radius: 10px; padding: 8px; font-size: 12px; font-weight: 600; color: #2C1E30; cursor: pointer; }
   .who-btn.inactive { background: #2C1E30; color: #8A7690; }
-
-  .chat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
-  .avatar { width: 38px; height: 38px; border-radius: 50%; background: #E8A33D; color: #2C1E30;
-    display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 16px; }
+  .chat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: #E8A33D; color: #2C1E30; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 16px; position: relative; }
+  .online-dot { width: 10px; height: 10px; border-radius: 50%; background: #4CAF50; position: absolute; bottom: 0; right: 0; border: 2px solid #1F1522; display: none; }
+  .online-dot.on { display: block; }
   .chat-name { font-size: 15px; }
   .chat-sub { font-size: 11px; color: #8A7690; }
-
-  .chat-box { display: flex; flex-direction: column; min-height: 300px; max-height: 55vh; overflow-y: auto; margin-bottom: 12px; padding-right: 2px; }
-  .bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 14px; margin-bottom: 8px; line-height: 1.4; }
-  .bubble.me { align-self: flex-end; background: #E8A33D; color: #2C1E30; border-bottom-right-radius: 4px; }
-  .bubble.them { align-self: flex-start; background: #37273B; border-bottom-left-radius: 4px; }
+  .typing-indicator { font-size: 11px; color: #F2B8C6; height: 16px; margin-bottom: 8px; }
+  .chat-box { display: flex; flex-direction: column; min-height: 280px; max-height: 50vh; overflow-y: auto; margin-bottom: 12px; padding-right: 2px; }
+  .bubble-wrap { display: flex; flex-direction: column; margin-bottom: 10px; }
+  .bubble-wrap.me { align-items: flex-end; }
+  .bubble-wrap.them { align-items: flex-start; }
+  .bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; position: relative; }
+  .bubble.me { background: #E8A33D; color: #2C1E30; border-bottom-right-radius: 4px; }
+  .bubble.them { background: #37273B; border-bottom-left-radius: 4px; }
   .bubble img { display: block; max-width: 170px; border-radius: 10px; }
-
+  .msg-meta { font-size: 10px; color: #8A7690; margin-top: 3px; display: flex; gap: 6px; align-items: center; }
+  .reaction-row { display: flex; gap: 4px; margin-top: 4px; }
+  .reaction-pill { background: #1F1522; border-radius: 10px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
+  .react-picker { display: none; gap: 4px; background: #17101A; border-radius: 12px; padding: 6px 8px; margin-top: 4px; }
+  .react-picker.open { display: flex; }
+  .react-picker span { cursor: pointer; font-size: 16px; }
   .compose-row { display: flex; gap: 8px; align-items: center; }
-  .compose-row input {
-    flex: 1; background: #1F1522; border: 1px solid #45364A; border-radius: 22px; padding: 12px 16px; color: #F5EFE6; font-size: 14px;
-  }
+  .compose-row input[type=text] { flex: 1; background: #1F1522; border: 1px solid #45364A; border-radius: 22px; padding: 12px 16px; color: #F5EFE6; font-size: 14px; }
   .compose-row input:focus { outline: none; border-color: #E8A33D; }
-  .sketch-btn, .send-btn {
-    background: #E8A33D; border: none; border-radius: 50%; width: 42px; height: 42px;
-    font-size: 16px; cursor: pointer; flex-shrink: 0;
-  }
+  .sketch-btn, .send-btn { background: #E8A33D; border: none; border-radius: 50%; width: 42px; height: 42px; font-size: 16px; cursor: pointer; flex-shrink: 0; display:flex; align-items:center; justify-content:center; }
   .send-btn { border-radius: 22px; width: auto; padding: 0 18px; font-weight: 600; color: #2C1E30; }
-
   .wish-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(245,239,230,0.08); }
   .wish-row input[type=checkbox] { width: 18px; height: 18px; accent-color: #E8A33D; }
   .wish-input-row { display: flex; gap: 8px; margin-top: 14px; }
   .wish-input-row input { flex: 1; background: #1F1522; border: 1px solid #45364A; border-radius: 10px; padding: 10px; color: #F5EFE6; }
   .wish-input-row button { background: #E8A33D; border: none; border-radius: 10px; padding: 10px 16px; font-weight: 600; color: #2C1E30; cursor: pointer; }
-
   .game-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
   .game-tab { background: #2C1E30; color: #8A7690; border: none; border-radius: 20px; padding: 8px 12px; font-size: 12px; cursor: pointer; }
   .game-tab.active { background: #E8A33D; color: #2C1E30; font-weight: 600; }
   .game-panel { display: none; }
   .game-panel.active { display: block; }
   .card.game-card { padding: 20px; }
-
-  .ttt-cell { background: #1F1522; border: 1px solid #45364A; border-radius: 10px; height: 64px;
-    display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; }
+  .ttt-cell { background: #1F1522; border: 1px solid #45364A; border-radius: 10px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; }
   .big-btn { width: 100%; padding: 18px; font-size: 16px; border-radius: 14px; border: none; background: #E8A33D; color: #2C1E30; font-weight: 700; cursor: pointer; }
   .this-or-that-row { display: flex; gap: 10px; }
   .this-or-that-row button { flex: 1; padding: 16px; border-radius: 12px; border: none; background: #1F1522; color: #F5EFE6; font-size: 15px; cursor: pointer; }
@@ -100,24 +80,29 @@
   .box-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .box-cell { background: #1F1522; border-radius: 12px; padding: 20px 0; text-align: center; font-size: 24px; cursor: pointer; }
   .box-cell.opened { opacity: 0.35; cursor: default; }
-
-  .bottom-nav {
-    position: fixed; bottom: 0; left: 0; right: 0; background: #17101A;
-    display: flex; justify-content: space-around; padding: 10px 0 14px;
-    border-top: 1px solid rgba(245,239,230,0.08); z-index: 40;
-  }
+  .filter-row { display: flex; gap: 8px; margin: 10px 0; overflow-x: auto; }
+  .filter-thumb { width: 54px; height: 54px; border-radius: 10px; flex-shrink: 0; border: 2px solid transparent; cursor: pointer; object-fit: cover; }
+  .filter-thumb.selected { border-color: #E8A33D; }
+  .memory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .memory-item { background: #1F1522; border-radius: 12px; overflow: hidden; }
+  .memory-item img { width: 100%; height: 120px; object-fit: cover; display: block; }
+  .memory-caption { font-size: 11px; color: #8A7690; padding: 6px 8px; }
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #17101A; display: flex; justify-content: space-around; padding: 10px 0 14px; border-top: 1px solid rgba(245,239,230,0.08); z-index: 40; }
   .nav-btn { background: none; border: none; color: #8A7690; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
   .nav-btn .icon { font-size: 20px; }
   .nav-btn.active { color: #E8A33D; }
-
   #status { text-align: center; color: #8A7690; font-size: 12px; margin-top: 8px; min-height: 16px; }
-
-  .sketch-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 60;
-    flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+  .sketch-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 60; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   .sketch-modal.open { display: flex; }
   #sketchCanvas { background: #F5EFE6; border-radius: 14px; touch-action: none; }
   .sketch-controls { display: flex; gap: 10px; margin-top: 16px; }
   .sketch-controls button { padding: 10px 18px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
+  .surprise-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 70; align-items: center; justify-content: center; padding: 30px; }
+  .surprise-modal.open { display: flex; }
+  .surprise-content { background: #2C1E30; border-radius: 20px; padding: 30px 24px; text-align: center; max-width: 320px; }
+  .surprise-content .emoji { font-size: 40px; margin-bottom: 14px; }
+  .surprise-content p { font-size: 15px; line-height: 1.5; margin-bottom: 20px; }
+  .surprise-content button { background: #E8A33D; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 600; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -157,6 +142,7 @@
 
   <div class="card">
     <button class="hug-btn" id="hugBtn">🤗 send a hug</button>
+    <button class="surprise-btn" id="surpriseBtn">✨ surprise me</button>
   </div>
 
   <div id="status"></div>
@@ -165,15 +151,18 @@
 <!-- CHAT -->
 <div class="screen" id="screen-chat">
   <div class="chat-header">
-    <div class="avatar" id="chatAvatar">F</div>
+    <div class="avatar" id="chatAvatar">F<span class="online-dot" id="onlineDot"></span></div>
     <div>
       <div class="chat-name" id="chatPartnerName">Favour</div>
-      <div class="chat-sub">your private space</div>
+      <div class="chat-sub" id="lastSeenText">last seen recently</div>
     </div>
   </div>
+  <div class="typing-indicator" id="typingIndicator"></div>
   <div id="chatBox" class="chat-box"></div>
   <div class="compose-row">
     <button class="sketch-btn" id="openSketchBtn">✎</button>
+    <label class="sketch-btn" for="photoInput">📷</label>
+    <input type="file" accept="image/*" id="photoInput" style="display:none;">
     <input id="chatInput" type="text" placeholder="write something...">
     <button class="send-btn" id="sendChatBtn">send</button>
   </div>
@@ -196,22 +185,18 @@
 <div class="screen" id="screen-games">
   <h1 class="app-title" style="font-size:20px;">Play Together</h1>
   <div class="app-subtitle">for whenever you're both bored</div>
-
   <div class="game-tabs">
     <button class="game-tab active" data-game="ttt">❌⭕ Tic-Tac-Toe</button>
     <button class="game-tab" data-game="tap">🎯 Tap Race</button>
     <button class="game-tab" data-game="draw">💥 Quick Draw</button>
     <button class="game-tab" data-game="tot">❤️ This or That</button>
-    <button class="game-tab" data-game="box">🎁 Mystery Box</button>
   </div>
-
   <div class="card game-card">
     <div class="game-panel active" id="panel-ttt">
       <div id="tttStatus" style="color:#F2B8C6; font-size:13px; margin-bottom:14px; text-align:center;"></div>
       <div id="tttBoard" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:220px; margin:0 auto;"></div>
       <button id="tttResetBtn" style="margin-top:16px; width:100%; background:#45364A; color:#F5EFE6; border:none; border-radius:10px; padding:10px;">reset game</button>
     </div>
-
     <div class="game-panel" id="panel-tap">
       <div id="tapStatus" style="color:#F2B8C6; font-size:13px; margin-bottom:14px; text-align:center;">tap 20 times first to win!</div>
       <div style="display:flex; justify-content:space-around; margin-bottom:16px; font-size:15px;">
@@ -221,23 +206,26 @@
       <button class="big-btn" id="tapBtn">TAP!</button>
       <button id="tapResetBtn" style="margin-top:12px; width:100%; background:#45364A; color:#F5EFE6; border:none; border-radius:10px; padding:10px;">reset</button>
     </div>
-
     <div class="game-panel" id="panel-draw">
       <div id="drawStatus" style="text-align:center; font-size:17px; margin-bottom:16px;">tap start to begin</div>
       <button class="big-btn" id="drawBtn">START</button>
     </div>
-
     <div class="game-panel" id="panel-tot">
       <div id="totQuestion" style="text-align:center; margin-bottom:14px; font-size:14px; color:#8A7690;"></div>
       <div class="this-or-that-row" id="totRow"></div>
       <div id="totResult" style="text-align:center; margin-top:14px; font-size:13px; color:#F2B8C6;"></div>
       <button id="totNextBtn" style="margin-top:12px; width:100%; background:#45364A; color:#F5EFE6; border:none; border-radius:10px; padding:10px;">next question</button>
     </div>
+  </div>
 
-    <div class="game-panel" id="panel-box">
-      <div id="boxGrid" class="box-grid"></div>
-      <div id="boxResult" style="text-align:center; margin-top:14px; font-size:13px; color:#F2B8C6;"></div>
-    </div>
+  <h1 class="app-title" style="font-size:18px; margin-top:8px;">Our Memories</h1>
+  <div class="app-subtitle">little moments, saved</div>
+  <div class="card">
+    <div class="memory-grid" id="memoryGrid"></div>
+    <label class="wish-input-row" style="cursor:pointer;">
+      <span style="flex:1; background:#1F1522; border:1px solid #45364A; border-radius:10px; padding:10px; color:#8A7690; text-align:center;">+ add a memory</span>
+      <input type="file" accept="image/*" id="memoryInput" style="display:none;">
+    </label>
   </div>
 </div>
 
@@ -259,12 +247,34 @@
   </div>
 </div>
 
+<!-- Photo filter modal -->
+<div class="sketch-modal" id="filterModal">
+  <canvas id="filterCanvas" width="280" height="280" style="border-radius:14px;"></canvas>
+  <div class="filter-row" id="filterRow"></div>
+  <div class="sketch-controls">
+    <button id="cancelFilterBtn" style="background:#2C1E30; color:#F5EFE6;">cancel</button>
+    <button id="sendFilterBtn" style="background:#E8A33D; color:#2C1E30;">send</button>
+  </div>
+</div>
+
+<!-- Surprise modal -->
+<div class="surprise-modal" id="surpriseModal">
+  <div class="surprise-content">
+    <div class="emoji">🎁</div>
+    <p id="surpriseText">...</p>
+    <button id="closeSurpriseBtn">close</button>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL = "https://oewhhcleehkhjjyliivb.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ld2hoY2xlZWhraGpqeWxpaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MTUwOTIsImV4cCI6MjEwNDE5MTA5Mn0.3IYP_WYYniWFdwwfq9dWJHMLCDUicsnTONUn_uOCgpg";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const REACT_EMOJIS = ["❤️","😂","😭","👀","🔥"];
 
   let CURRENT_USER = localStorage.getItem("us_app_user") || "isreal";
+  function partnerOf(u) { return u === "isreal" ? "favour" : "isreal"; }
+
   function setUser(user) {
     CURRENT_USER = user;
     localStorage.setItem("us_app_user", user);
@@ -272,14 +282,14 @@
     document.getElementById("whoFavour").classList.toggle("inactive", user !== "favour");
     const partnerName = user === "isreal" ? "Favour" : "Isreal";
     document.getElementById("chatPartnerName").textContent = partnerName;
-    document.getElementById("chatAvatar").textContent = partnerName[0];
+    document.getElementById("chatAvatar").firstChild.textContent = partnerName[0];
     loadChat();
     loadPartnerMood();
+    loadPresence();
   }
   document.getElementById("whoIsreal").addEventListener("click", () => setUser("isreal"));
   document.getElementById("whoFavour").addEventListener("click", () => setUser("favour"));
 
-  // ---- Bottom nav switching ----
   document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
@@ -329,22 +339,109 @@
     setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2000);
   });
 
+  // ---- Surprise Me (reuses mystery_box table) ----
+  document.getElementById("surpriseBtn").addEventListener("click", async () => {
+    const { data } = await sb.from("mystery_box").select("*").eq("opened", false);
+    if (!data || data.length === 0) {
+      document.getElementById("surpriseText").textContent = "no more surprises left... for now 😉";
+    } else {
+      const pick = data[Math.floor(Math.random() * data.length)];
+      await sb.from("mystery_box").update({ opened: true, opened_by: CURRENT_USER }).eq("id", pick.id);
+      document.getElementById("surpriseText").textContent = pick.content;
+    }
+    document.getElementById("surpriseModal").classList.add("open");
+  });
+  document.getElementById("closeSurpriseBtn").addEventListener("click", () => {
+    document.getElementById("surpriseModal").classList.remove("open");
+  });
+
+  // ---- Presence: typing + last seen + online ----
+  async function touchPresence(typing) {
+    await sb.from("presence").update({ last_seen: new Date().toISOString(), is_typing: typing }).eq("user_name", CURRENT_USER);
+  }
+  let typingTimeout;
+  document.getElementById("chatInput").addEventListener("input", () => {
+    touchPresence(true);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => touchPresence(false), 2000);
+  });
+
+  async function loadPresence() {
+    const partner = partnerOf(CURRENT_USER);
+    const { data, error } = await sb.from("presence").select("*").eq("user_name", partner).single();
+    if (error || !data) return;
+    const lastSeen = new Date(data.last_seen);
+    const secsAgo = (Date.now() - lastSeen.getTime()) / 1000;
+    const online = secsAgo < 30;
+    document.getElementById("onlineDot").classList.toggle("on", online);
+    document.getElementById("lastSeenText").textContent = online
+      ? "online now 🟢"
+      : "last seen " + lastSeen.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    document.getElementById("typingIndicator").textContent = data.is_typing ? `${document.getElementById("chatPartnerName").textContent} is typing...` : "";
+  }
+
+  // ---- Chat ----
+  function timeAgoLabel(iso) {
+    return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  }
+
   async function loadChat() {
     const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: true });
     if (error) return;
     const box = document.getElementById("chatBox");
     box.innerHTML = "";
     data.forEach(msg => {
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap " + (msg.sender === CURRENT_USER ? "me" : "them");
+
       const b = document.createElement("div");
       b.className = "bubble " + (msg.sender === CURRENT_USER ? "me" : "them");
-      if (msg.type === "sketch" && msg.sketch_data) {
+      if ((msg.type === "sketch" || msg.type === "photo") && msg.sketch_data) {
         const img = document.createElement("img");
         img.src = msg.sketch_data;
         b.appendChild(img);
       } else {
         b.textContent = msg.text_body || "";
       }
-      box.appendChild(b);
+      wrap.appendChild(b);
+
+      const reactions = msg.reactions || {};
+      const reactionRow = document.createElement("div");
+      reactionRow.className = "reaction-row";
+      Object.entries(reactions).forEach(([emoji, users]) => {
+        if (users.length === 0) return;
+        const pill = document.createElement("span");
+        pill.className = "reaction-pill";
+        pill.textContent = `${emoji} ${users.length}`;
+        reactionRow.appendChild(pill);
+      });
+      wrap.appendChild(reactionRow);
+
+      const picker = document.createElement("div");
+      picker.className = "react-picker";
+      REACT_EMOJIS.forEach(emoji => {
+        const span = document.createElement("span");
+        span.textContent = emoji;
+        span.addEventListener("click", async () => {
+          const current = msg.reactions || {};
+          const list = current[emoji] || [];
+          if (!list.includes(CURRENT_USER)) list.push(CURRENT_USER);
+          current[emoji] = list;
+          await sb.from("messages").update({ reactions: current }).eq("id", msg.id);
+          picker.classList.remove("open");
+          loadChat();
+        });
+        picker.appendChild(span);
+      });
+      wrap.appendChild(picker);
+      b.addEventListener("click", () => picker.classList.toggle("open"));
+
+      const meta = document.createElement("div");
+      meta.className = "msg-meta";
+      meta.textContent = timeAgoLabel(msg.created_at);
+      wrap.appendChild(meta);
+
+      box.appendChild(wrap);
     });
     box.scrollTop = box.scrollHeight;
   }
@@ -355,29 +452,28 @@
     if (!text) return;
     await sb.from("messages").insert({ sender: CURRENT_USER, type: "text", text_body: text });
     input.value = "";
+    touchPresence(false);
     loadChat();
   });
 
+  // ---- Sketch canvas ----
   const modal = document.getElementById("sketchModal");
   const canvas = document.getElementById("sketchCanvas");
   const ctx = canvas.getContext("2d");
   let drawing = false;
   function startDraw(x, y) { drawing = true; ctx.beginPath(); ctx.moveTo(x, y); }
-  function draw(x, y) {
-    if (!drawing) return;
-    ctx.lineTo(x, y); ctx.strokeStyle = "#2C1E30"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.stroke();
-  }
+  function draw(x, y) { if (!drawing) return; ctx.lineTo(x, y); ctx.strokeStyle = "#2C1E30"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.stroke(); }
   function stopDraw() { drawing = false; }
-  function getPos(e) {
-    const rect = canvas.getBoundingClientRect();
+  function getPos(e, c) {
+    const rect = c.getBoundingClientRect();
     if (e.touches) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
-  canvas.addEventListener("mousedown", e => { const p = getPos(e); startDraw(p.x, p.y); });
-  canvas.addEventListener("mousemove", e => { const p = getPos(e); draw(p.x, p.y); });
+  canvas.addEventListener("mousedown", e => { const p = getPos(e, canvas); startDraw(p.x, p.y); });
+  canvas.addEventListener("mousemove", e => { const p = getPos(e, canvas); draw(p.x, p.y); });
   canvas.addEventListener("mouseup", stopDraw);
-  canvas.addEventListener("touchstart", e => { e.preventDefault(); const p = getPos(e); startDraw(p.x, p.y); });
-  canvas.addEventListener("touchmove", e => { e.preventDefault(); const p = getPos(e); draw(p.x, p.y); });
+  canvas.addEventListener("touchstart", e => { e.preventDefault(); const p = getPos(e, canvas); startDraw(p.x, p.y); });
+  canvas.addEventListener("touchmove", e => { e.preventDefault(); const p = getPos(e, canvas); draw(p.x, p.y); });
   canvas.addEventListener("touchend", stopDraw);
   function clearCanvas() { ctx.fillStyle = "#F5EFE6"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
   document.getElementById("openSketchBtn").addEventListener("click", () => { clearCanvas(); modal.classList.add("open"); });
@@ -390,6 +486,103 @@
     loadChat();
   });
 
+  // ---- Photo upload + filters ----
+  const FILTERS = [
+    { name: "Normal", css: "none" },
+    { name: "B&W", css: "grayscale(1)" },
+    { name: "Sepia", css: "sepia(0.8)" },
+    { name: "Vivid", css: "saturate(1.8) contrast(1.1)" },
+    { name: "Warm", css: "sepia(0.3) saturate(1.3) brightness(1.05)" }
+  ];
+  let currentPhotoImg = null;
+  let currentFilterCss = "none";
+  const filterModal = document.getElementById("filterModal");
+  const filterCanvas = document.getElementById("filterCanvas");
+  const filterCtx = filterCanvas.getContext("2d");
+
+  function drawFilteredImage() {
+    filterCtx.filter = currentFilterCss;
+    filterCtx.clearRect(0, 0, filterCanvas.width, filterCanvas.height);
+    filterCtx.drawImage(currentPhotoImg, 0, 0, filterCanvas.width, filterCanvas.height);
+  }
+
+  document.getElementById("photoInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      currentPhotoImg = new Image();
+      currentPhotoImg.onload = () => {
+        currentFilterCss = "none";
+        drawFilteredImage();
+        const row = document.getElementById("filterRow");
+        row.innerHTML = "";
+        FILTERS.forEach(f => {
+          const thumb = document.createElement("canvas");
+          thumb.width = 54; thumb.height = 54;
+          thumb.className = "filter-thumb" + (f.css === "none" ? " selected" : "");
+          const tctx = thumb.getContext("2d");
+          tctx.filter = f.css;
+          tctx.drawImage(currentPhotoImg, 0, 0, 54, 54);
+          thumb.addEventListener("click", () => {
+            currentFilterCss = f.css;
+            document.querySelectorAll(".filter-thumb").forEach(t => t.classList.remove("selected"));
+            thumb.classList.add("selected");
+            drawFilteredImage();
+          });
+          row.appendChild(thumb);
+        });
+        filterModal.classList.add("open");
+      };
+      currentPhotoImg.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  });
+
+  document.getElementById("cancelFilterBtn").addEventListener("click", () => filterModal.classList.remove("open"));
+  document.getElementById("sendFilterBtn").addEventListener("click", async () => {
+    document.getElementById("status").textContent = "uploading photo...";
+    filterCanvas.toBlob(async (blob) => {
+      const fileName = `${Date.now()}.png`;
+      const { error: uploadError } = await sb.storage.from("photos").upload(fileName, blob);
+      if (uploadError) { document.getElementById("status").textContent = "upload failed 😕"; return; }
+      const { data: urlData } = sb.storage.from("photos").getPublicUrl(fileName);
+      await sb.from("messages").insert({ sender: CURRENT_USER, type: "photo", sketch_data: urlData.publicUrl });
+      document.getElementById("status").textContent = "photo sent 📷";
+      filterModal.classList.remove("open");
+      loadChat();
+    }, "image/png");
+  });
+
+  // ---- Memories ----
+  document.getElementById("memoryInput").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const caption = prompt("add a little caption for this memory (optional):") || "";
+    const fileName = `mem_${Date.now()}_${file.name}`;
+    const { error: uploadError } = await sb.storage.from("photos").upload(fileName, file);
+    if (uploadError) { document.getElementById("status").textContent = "upload failed 😕"; return; }
+    const { data: urlData } = sb.storage.from("photos").getPublicUrl(fileName);
+    await sb.from("memories").insert({ image_url: urlData.publicUrl, caption, added_by: CURRENT_USER });
+    e.target.value = "";
+    loadMemories();
+  });
+
+  async function loadMemories() {
+    const { data, error } = await sb.from("memories").select("*").order("created_at", { ascending: false });
+    if (error) return;
+    const grid = document.getElementById("memoryGrid");
+    grid.innerHTML = "";
+    data.forEach(m => {
+      const item = document.createElement("div");
+      item.className = "memory-item";
+      item.innerHTML = `<img src="${m.image_url}"><div class="memory-caption">${m.caption || ""}</div>`;
+      grid.appendChild(item);
+    });
+  }
+
+  // ---- Wishlist ----
   async function loadWishlist() {
     const { data, error } = await sb.from("wishlist_items").select("*").order("created_at", { ascending: true });
     if (error) return;
@@ -418,6 +611,7 @@
     loadWishlist();
   });
 
+  // ---- Hugs ----
   let lastSeenHugTime = new Date().toISOString();
   async function checkForHugs() {
     const { data, error } = await sb.from("hugs")
@@ -434,6 +628,7 @@
     setTimeout(() => banner.remove(), 4000);
   }
 
+  // ---- Games ----
   document.querySelectorAll(".game-tab").forEach(tab => {
     tab.addEventListener("click", () => {
       document.querySelectorAll(".game-tab").forEach(t => t.classList.remove("active"));
@@ -461,11 +656,8 @@
       container.appendChild(cell);
     });
     const statusEl = document.getElementById("tttStatus");
-    if (game.winner) {
-      statusEl.textContent = game.winner === "draw" ? "it's a draw! 😅" : `${game.winner} wins! 🎉`;
-    } else {
-      statusEl.textContent = game.turn === CURRENT_USER ? "your turn 👀" : "waiting for partner...";
-    }
+    if (game.winner) statusEl.textContent = game.winner === "draw" ? "it's a draw! 😅" : `${game.winner} wins! 🎉`;
+    else statusEl.textContent = game.turn === CURRENT_USER ? "your turn 👀" : "waiting for partner...";
   }
   async function makeMove(game, index) {
     if (game.winner || game.turn !== CURRENT_USER) return;
@@ -489,7 +681,7 @@
     const { data, error } = await sb.from("tap_race").select("*").limit(1).single();
     if (error || !data) return;
     document.getElementById("myTaps").textContent = data[CURRENT_USER + "_taps"];
-    document.getElementById("partnerTaps").textContent = data[(CURRENT_USER === "isreal" ? "favour" : "isreal") + "_taps"];
+    document.getElementById("partnerTaps").textContent = data[partnerOf(CURRENT_USER) + "_taps"];
     document.getElementById("tapStatus").textContent = data.winner ? `${data.winner} wins the tap race! 🏆` : "tap 20 times first to win!";
   }
   document.getElementById("tapBtn").addEventListener("click", async () => {
@@ -507,11 +699,10 @@
     loadTapRace();
   });
 
-  document.getElementById("drawBtn").addEventListener("click", async () => {
+  document.getElementById("drawBtn").addEventListener("click", () => {
     const statusEl = document.getElementById("drawStatus");
     const btn = document.getElementById("drawBtn");
-    statusEl.textContent = "wait...";
-    btn.disabled = true;
+    statusEl.textContent = "wait..."; btn.disabled = true;
     const delay = 1500 + Math.random() * 3000;
     setTimeout(() => {
       statusEl.textContent = "GO! TAP NOW!";
@@ -520,8 +711,7 @@
       btn.onclick = () => {
         const reaction = Date.now() - goTime;
         statusEl.textContent = `your reaction: ${reaction}ms 🎯`;
-        btn.disabled = true;
-        btn.onclick = null;
+        btn.disabled = true; btn.onclick = null;
         setTimeout(() => { statusEl.textContent = "tap start to begin"; btn.disabled = false; }, 3000);
       };
     }, delay);
@@ -551,44 +741,26 @@
     renderTot();
   });
 
-  async function loadBoxes() {
-    const { data, error } = await sb.from("mystery_box").select("*").order("label", { ascending: true });
-    if (error || !data) return;
-    const grid = document.getElementById("boxGrid");
-    grid.innerHTML = "";
-    data.forEach(box => {
-      const cell = document.createElement("div");
-      cell.className = "box-cell" + (box.opened ? " opened" : "");
-      cell.textContent = box.opened ? "✅" : "🎁";
-      if (!box.opened) {
-        cell.addEventListener("click", async () => {
-          await sb.from("mystery_box").update({ opened: true, opened_by: CURRENT_USER }).eq("id", box.id);
-          document.getElementById("boxResult").textContent = box.content;
-          loadBoxes();
-        });
-      }
-      grid.appendChild(cell);
-    });
-  }
-
+  // ---- Init ----
   setUser(CURRENT_USER);
   loadDayCount();
   updateClocks();
   renderTot();
+  loadWishlist();
+  loadGame();
+  loadTapRace();
+  loadMemories();
+
   setInterval(updateClocks, 1000);
   setInterval(loadChat, 4000);
   setInterval(loadPartnerMood, 4000);
   setInterval(checkForHugs, 4000);
   setInterval(loadGame, 3000);
   setInterval(loadTapRace, 2000);
-  loadWishlist();
-  loadGame();
-  loadTapRace();
-  loadBoxes();
+  setInterval(loadPresence, 4000);
+  setInterval(() => touchPresence(document.getElementById("chatInput") === document.activeElement), 8000);
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js");
-  }
+  if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js"); }
 </script>
 
 </body>
