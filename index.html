@@ -77,15 +77,9 @@
   .this-or-that-row { display: flex; gap: 10px; }
   .this-or-that-row button { flex: 1; padding: 16px; border-radius: 12px; border: none; background: #1F1522; color: #F5EFE6; font-size: 15px; cursor: pointer; }
   .this-or-that-row button.picked { background: #E8A33D; color: #2C1E30; }
-  .box-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .box-cell { background: #1F1522; border-radius: 12px; padding: 20px 0; text-align: center; font-size: 24px; cursor: pointer; }
-  .box-cell.opened { opacity: 0.35; cursor: default; }
-  .filter-row { display: flex; gap: 8px; margin: 10px 0; overflow-x: auto; }
-  .filter-thumb { width: 54px; height: 54px; border-radius: 10px; flex-shrink: 0; border: 2px solid transparent; cursor: pointer; object-fit: cover; }
-  .filter-thumb.selected { border-color: #E8A33D; }
   .memory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .memory-item { background: #1F1522; border-radius: 12px; overflow: hidden; }
-  .memory-item img { width: 100%; height: 120px; object-fit: cover; display: block; }
+  .memory-item img { width: 100%; height: 120px; object-fit: cover; display: block; cursor: pointer; }
   .memory-caption { font-size: 11px; color: #8A7690; padding: 6px 8px; }
   .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #17101A; display: flex; justify-content: space-around; padding: 10px 0 14px; border-top: 1px solid rgba(245,239,230,0.08); z-index: 40; }
   .nav-btn { background: none; border: none; color: #8A7690; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
@@ -97,12 +91,18 @@
   #sketchCanvas { background: #F5EFE6; border-radius: 14px; touch-action: none; }
   .sketch-controls { display: flex; gap: 10px; margin-top: 16px; }
   .sketch-controls button { padding: 10px 18px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
+  .filter-row { display: flex; gap: 8px; margin: 10px 0; overflow-x: auto; }
+  .filter-thumb { width: 54px; height: 54px; border-radius: 10px; flex-shrink: 0; border: 2px solid transparent; cursor: pointer; }
+  .filter-thumb.selected { border-color: #E8A33D; }
   .surprise-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 70; align-items: center; justify-content: center; padding: 30px; }
   .surprise-modal.open { display: flex; }
   .surprise-content { background: #2C1E30; border-radius: 20px; padding: 30px 24px; text-align: center; max-width: 320px; }
   .surprise-content .emoji { font-size: 40px; margin-bottom: 14px; }
   .surprise-content p { font-size: 15px; line-height: 1.5; margin-bottom: 20px; }
   .surprise-content button { background: #E8A33D; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 600; cursor: pointer; }
+  .preview-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 80; align-items: center; justify-content: center; padding: 20px; cursor: pointer; }
+  .preview-modal.open { display: flex; }
+  .preview-modal img { max-width: 90%; max-height: 85%; border-radius: 14px; }
 </style>
 </head>
 <body>
@@ -112,14 +112,11 @@
   <button class="who-btn inactive" id="whoFavour">I'm Favour</button>
 </div>
 
-<!-- HOME -->
 <div class="screen active" id="screen-home">
   <h1 class="app-title">Our Little World</h1>
   <div class="app-subtitle">just for the two of us</div>
-
   <div class="num" id="dayCount">--</div>
   <div class="sub">DAYS TOGETHER</div>
-
   <div class="card">
     <div class="card-title">Time Zones</div>
     <div class="tz-row">
@@ -127,7 +124,6 @@
       <div><span class="tz-place">Partner</span><span class="tz-time" id="timeHer">--:--</span></div>
     </div>
   </div>
-
   <div class="card">
     <div class="card-title">How are you feeling?</div>
     <div class="partner-mood" id="partnerMood"></div>
@@ -139,16 +135,13 @@
       <button class="mood-btn" data-mood="tired">😴</button>
     </div>
   </div>
-
   <div class="card">
     <button class="hug-btn" id="hugBtn">🤗 send a hug</button>
     <button class="surprise-btn" id="surpriseBtn">✨ surprise me</button>
   </div>
-
   <div id="status"></div>
 </div>
 
-<!-- CHAT -->
 <div class="screen" id="screen-chat">
   <div class="chat-header">
     <div class="avatar" id="chatAvatar">F<span class="online-dot" id="onlineDot"></span></div>
@@ -168,7 +161,6 @@
   </div>
 </div>
 
-<!-- WISHLIST -->
 <div class="screen" id="screen-wishlist">
   <h1 class="app-title" style="font-size:20px;">When We Meet</h1>
   <div class="app-subtitle">things to look forward to</div>
@@ -181,7 +173,6 @@
   </div>
 </div>
 
-<!-- GAMES -->
 <div class="screen" id="screen-games">
   <h1 class="app-title" style="font-size:20px;">Play Together</h1>
   <div class="app-subtitle">for whenever you're both bored</div>
@@ -229,7 +220,6 @@
   </div>
 </div>
 
-<!-- BOTTOM NAV -->
 <div class="bottom-nav">
   <button class="nav-btn active" data-screen="home"><span class="icon">🏠</span>Home</button>
   <button class="nav-btn" data-screen="chat"><span class="icon">💬</span>Chat</button>
@@ -237,7 +227,6 @@
   <button class="nav-btn" data-screen="games"><span class="icon">🎮</span>Games</button>
 </div>
 
-<!-- Sketch modal -->
 <div class="sketch-modal" id="sketchModal">
   <canvas id="sketchCanvas" width="280" height="360"></canvas>
   <div class="sketch-controls">
@@ -247,7 +236,6 @@
   </div>
 </div>
 
-<!-- Photo filter modal -->
 <div class="sketch-modal" id="filterModal">
   <canvas id="filterCanvas" width="280" height="280" style="border-radius:14px;"></canvas>
   <div class="filter-row" id="filterRow"></div>
@@ -257,7 +245,6 @@
   </div>
 </div>
 
-<!-- Surprise modal -->
 <div class="surprise-modal" id="surpriseModal">
   <div class="surprise-content">
     <div class="emoji">🎁</div>
@@ -266,11 +253,23 @@
   </div>
 </div>
 
+<div class="preview-modal" id="previewModal">
+  <img id="previewImg">
+</div>
+
 <script>
   const SUPABASE_URL = "https://oewhhcleehkhjjyliivb.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ld2hoY2xlZWhraGpqeWxpaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MTUwOTIsImV4cCI6MjEwNDE5MTA5Mn0.3IYP_WYYniWFdwwfq9dWJHMLCDUicsnTONUn_uOCgpg";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const REACT_EMOJIS = ["❤️","😂","😭","👀","🔥"];
+
+  function openPreview(url) {
+    document.getElementById("previewImg").src = url;
+    document.getElementById("previewModal").classList.add("open");
+  }
+  document.getElementById("previewModal").addEventListener("click", () => {
+    document.getElementById("previewModal").classList.remove("open");
+  });
 
   let CURRENT_USER = localStorage.getItem("us_app_user") || "isreal";
   function partnerOf(u) { return u === "isreal" ? "favour" : "isreal"; }
@@ -339,7 +338,6 @@
     setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2000);
   });
 
-  // ---- Surprise Me (reuses mystery_box table) ----
   document.getElementById("surpriseBtn").addEventListener("click", async () => {
     const { data } = await sb.from("mystery_box").select("*").eq("opened", false);
     if (!data || data.length === 0) {
@@ -355,7 +353,6 @@
     document.getElementById("surpriseModal").classList.remove("open");
   });
 
-  // ---- Presence: typing + last seen + online ----
   async function touchPresence(typing) {
     await sb.from("presence").update({ last_seen: new Date().toISOString(), is_typing: typing }).eq("user_name", CURRENT_USER);
   }
@@ -380,7 +377,6 @@
     document.getElementById("typingIndicator").textContent = data.is_typing ? `${document.getElementById("chatPartnerName").textContent} is typing...` : "";
   }
 
-  // ---- Chat ----
   function timeAgoLabel(iso) {
     return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   }
@@ -399,6 +395,8 @@
       if ((msg.type === "sketch" || msg.type === "photo") && msg.sketch_data) {
         const img = document.createElement("img");
         img.src = msg.sketch_data;
+        img.style.cursor = "pointer";
+        img.addEventListener("click", (e) => { e.stopPropagation(); openPreview(msg.sketch_data); });
         b.appendChild(img);
       } else {
         b.textContent = msg.text_body || "";
@@ -422,7 +420,8 @@
       REACT_EMOJIS.forEach(emoji => {
         const span = document.createElement("span");
         span.textContent = emoji;
-        span.addEventListener("click", async () => {
+        span.addEventListener("click", async (e) => {
+          e.stopPropagation();
           const current = msg.reactions || {};
           const list = current[emoji] || [];
           if (!list.includes(CURRENT_USER)) list.push(CURRENT_USER);
@@ -434,7 +433,10 @@
         picker.appendChild(span);
       });
       wrap.appendChild(picker);
-      b.addEventListener("click", () => picker.classList.toggle("open"));
+      b.addEventListener("click", (e) => {
+        if (e.target.tagName === "IMG") return;
+        picker.classList.toggle("open");
+      });
 
       const meta = document.createElement("div");
       meta.className = "msg-meta";
@@ -456,7 +458,6 @@
     loadChat();
   });
 
-  // ---- Sketch canvas ----
   const modal = document.getElementById("sketchModal");
   const canvas = document.getElementById("sketchCanvas");
   const ctx = canvas.getContext("2d");
@@ -486,7 +487,6 @@
     loadChat();
   });
 
-  // ---- Photo upload + filters ----
   const FILTERS = [
     { name: "Normal", css: "none" },
     { name: "B&W", css: "grayscale(1)" },
@@ -555,7 +555,6 @@
     }, "image/png");
   });
 
-  // ---- Memories ----
   document.getElementById("memoryInput").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -577,12 +576,18 @@
     data.forEach(m => {
       const item = document.createElement("div");
       item.className = "memory-item";
-      item.innerHTML = `<img src="${m.image_url}"><div class="memory-caption">${m.caption || ""}</div>`;
+      const img = document.createElement("img");
+      img.src = m.image_url;
+      img.addEventListener("click", () => openPreview(m.image_url));
+      const cap = document.createElement("div");
+      cap.className = "memory-caption";
+      cap.textContent = m.caption || "";
+      item.appendChild(img);
+      item.appendChild(cap);
       grid.appendChild(item);
     });
   }
 
-  // ---- Wishlist ----
   async function loadWishlist() {
     const { data, error } = await sb.from("wishlist_items").select("*").order("created_at", { ascending: true });
     if (error) return;
@@ -611,7 +616,6 @@
     loadWishlist();
   });
 
-  // ---- Hugs ----
   let lastSeenHugTime = new Date().toISOString();
   async function checkForHugs() {
     const { data, error } = await sb.from("hugs")
@@ -628,7 +632,6 @@
     setTimeout(() => banner.remove(), 4000);
   }
 
-  // ---- Games ----
   document.querySelectorAll(".game-tab").forEach(tab => {
     tab.addEventListener("click", () => {
       document.querySelectorAll(".game-tab").forEach(t => t.classList.remove("active"));
@@ -741,7 +744,6 @@
     renderTot();
   });
 
-  // ---- Init ----
   setUser(CURRENT_USER);
   loadDayCount();
   updateClocks();
