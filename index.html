@@ -753,16 +753,19 @@
   loadTapRace();
   loadMemories();
 
-  setInterval(updateClocks, 1000);
-  setInterval(loadChat, 4000);
-  setInterval(loadPartnerMood, 4000);
-  setInterval(checkForHugs, 4000);
-  setInterval(loadGame, 3000);
-  setInterval(loadTapRace, 2000);
-  setInterval(loadPresence, 4000);
-  setInterval(() => touchPresence(document.getElementById("chatInput") === document.activeElement), 8000);
+    setInterval(updateClocks, 1000);
+  setInterval(() => touchPresence(document.getElementById("chatInput") === document.activeElement), 10000);
 
   if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js"); }
+   // ---- Realtime: instant updates instead of constant polling ----
+  sb.channel("room1")
+    .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, loadChat)
+    .on("postgres_changes", { event: "*", schema: "public", table: "hugs" }, checkForHugs)
+    .on("postgres_changes", { event: "*", schema: "public", table: "mood_entries" }, loadPartnerMood)
+    .on("postgres_changes", { event: "*", schema: "public", table: "tictactoe" }, loadGame)
+    .on("postgres_changes", { event: "*", schema: "public", table: "tap_race" }, loadTapRace)
+    .on("postgres_changes", { event: "*", schema: "public", table: "presence" }, loadPresence)
+    .subscribe();
 </script>
 
 </body>
