@@ -438,9 +438,37 @@
         picker.classList.toggle("open");
       });
 
-      const meta = document.createElement("div");
+            const meta = document.createElement("div");
       meta.className = "msg-meta";
-      meta.textContent = timeAgoLabel(msg.created_at);
+      meta.textContent = timeAgoLabel(msg.created_at) + (msg.edited ? " (edited)" : "");
+
+      if (msg.sender === CURRENT_USER) {
+        const editBtn = document.createElement("span");
+        editBtn.textContent = " ✎";
+        editBtn.style.cursor = "pointer";
+        editBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          if (msg.type !== "text") return;
+          const newText = prompt("edit message:", msg.text_body);
+          if (newText === null || newText.trim() === "") return;
+          await sb.from("messages").update({ text_body: newText.trim(), edited: true }).eq("id", msg.id);
+          loadChat();
+        });
+
+        const delBtn = document.createElement("span");
+        delBtn.textContent = " 🗑️";
+        delBtn.style.cursor = "pointer";
+        delBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          if (!confirm("delete this message?")) return;
+          await sb.from("messages").delete().eq("id", msg.id);
+          loadChat();
+        });
+
+        meta.appendChild(editBtn);
+        meta.appendChild(delBtn);
+      }
+
       wrap.appendChild(meta);
 
       box.appendChild(wrap);
