@@ -853,6 +853,28 @@
 
   const ICE_SERVERS = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
+  // ---- Ring tones (generated, no audio file needed) ----
+  let ringInterval = null;
+  function startTone(freq, pattern) {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep() {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.4);
+    }
+    beep();
+    ringInterval = setInterval(beep, pattern);
+    return audioCtx;
+  }
+  function stopTone() {
+    if (ringInterval) { clearInterval(ringInterval); ringInterval = null; }
+  }
+ 
   function setupPeerConnection() {
     peerConnection = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
@@ -861,9 +883,10 @@
     peerConnection.ontrack = (event) => {
       event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
     };
-    peerConnection.onconnectionstatechange = () => {
+       peerConnection.onconnectionstatechange = () => {
       if (peerConnection.connectionState === "connected") {
         document.getElementById("callStatusText").textContent = "connected ✓";
+        stopTone();
       }
     };
   }
@@ -873,6 +896,7 @@
     document.getElementById("localVideo").srcObject = localStream;
     document.getElementById("callModal").classList.add("open");
     document.getElementById("callStatusText").textContent = "calling...";
+       startTone(440, 1500);
     appliedRemoteAnswer = false;
     appliedIce = new Set();
 
@@ -904,8 +928,9 @@
   document.getElementById("startVideoCallBtn").addEventListener("click", () => startCall(true));
   document.getElementById("startVoiceCallBtn").addEventListener("click", () => startCall(false));
 
-  async function endCall() {
+   async function endCall() {
     document.getElementById("callModal").classList.remove("open");
+    stopTone();
     document.getElementById("callStatusText").textContent = "";
     if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
     if (peerConnection) { peerConnection.close(); peerConnection = null; }
@@ -916,13 +941,15 @@
   // ---- Receiving calls ----
   let incomingCallData = null;
 
-  document.getElementById("declineCallBtn").addEventListener("click", async () => {
+    document.getElementById("declineCallBtn").addEventListener("click", async () => {
+    stopTone();
     if (incomingCallData) await sb.from("calls").update({ status: "declined" }).eq("id", incomingCallData.id);
     document.getElementById("incomingCallModal").classList.remove("open");
     incomingCallData = null;
   });
 
-  document.getElementById("acceptCallBtn").addEventListener("click", async () => {
+    document.getElementById("acceptCallBtn").addEventListener("click", async () => {
+    stopTone();
     document.getElementById("incomingCallModal").classList.remove("open");
     const call = incomingCallData;
     const withVideo = call.type === "video";
@@ -974,6 +1001,7 @@
         document.getElementById("incomingCallIcon").textContent = call.type === "video" ? "📹" : "📞";
         document.getElementById("incomingCallText").textContent = `Incoming ${call.type} call...`;
         document.getElementById("incomingCallModal").classList.add("open");
+               startTone(880, 800);
       }
     })
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "calls" }, async (payload) => {
