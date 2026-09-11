@@ -2,17 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Our Little World</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E8A33D">
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; }
+  html, body { touch-action: pan-y; }
   body {
     background: #1F1522; color: #F5EFE6;
     font-family: -apple-system, "Segoe UI", sans-serif;
     margin: 0; padding: 0 0 76px 0; min-height: 100vh;
+    overflow-x: hidden;
   }
   .screen { display: none; padding: 28px 20px 20px; max-width: 420px; margin: 0 auto; }
   .screen.active { display: block; }
@@ -43,29 +45,35 @@
   .chat-name { font-size: 15px; }
   .chat-sub { font-size: 11px; color: #8A7690; }
   .typing-indicator { font-size: 11px; color: #F2B8C6; height: 16px; margin-bottom: 8px; }
-  .chat-box { display: flex; flex-direction: column; min-height: 280px; max-height: 50vh; overflow-y: auto; margin-bottom: 12px; padding-right: 2px; }
-  .bubble-wrap { display: flex; flex-direction: column; margin-bottom: 10px; }
+  .chat-box { display: flex; flex-direction: column; min-height: 280px; max-height: 50vh; overflow-y: auto; margin-bottom: 8px; padding-right: 2px; }
+  .bubble-wrap { display: flex; flex-direction: column; margin-bottom: 10px; position: relative; transition: transform 0.15s; }
   .bubble-wrap.me { align-items: flex-end; }
   .bubble-wrap.them { align-items: flex-start; }
-  .bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; position: relative; }
+  .bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; position: relative; }
   .bubble.me { background: #E8A33D; color: #2C1E30; border-bottom-right-radius: 4px; }
   .bubble.them { background: #37273B; border-bottom-left-radius: 4px; }
-  .bubble img { display: block; max-width: 170px; border-radius: 10px; }
+  .bubble img { display: block; max-width: 170px; border-radius: 10px; cursor: pointer; }
+  .reply-quote { background: rgba(0,0,0,0.15); border-left: 3px solid #2C1E30; border-radius: 6px; padding: 4px 8px; font-size: 11px; margin-bottom: 6px; opacity: 0.85; }
+  .bubble.them .reply-quote { border-left-color: #E8A33D; }
   .msg-meta { font-size: 10px; color: #8A7690; margin-top: 3px; display: flex; gap: 6px; align-items: center; }
   .reaction-row { display: flex; gap: 4px; margin-top: 4px; }
   .reaction-pill { background: #1F1522; border-radius: 10px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
   .react-picker { display: none; gap: 4px; background: #17101A; border-radius: 12px; padding: 6px 8px; margin-top: 4px; }
   .react-picker.open { display: flex; }
   .react-picker span { cursor: pointer; font-size: 16px; }
+  .reply-bar { display: none; background: #2C1E30; border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; align-items: center; gap: 8px; }
+  .reply-bar.open { display: flex; }
+  .reply-bar-text { flex: 1; font-size: 12px; color: #F2B8C6; border-left: 3px solid #E8A33D; padding-left: 8px; }
+  .reply-bar-cancel { background: none; border: none; color: #8A7690; font-size: 16px; cursor: pointer; }
   .compose-row { display: flex; gap: 8px; align-items: center; }
-  .compose-row input[type=text] { flex: 1; background: #1F1522; border: 1px solid #45364A; border-radius: 22px; padding: 12px 16px; color: #F5EFE6; font-size: 14px; }
+  .compose-row input[type=text] { flex: 1; background: #1F1522; border: 1px solid #45364A; border-radius: 22px; padding: 12px 16px; color: #F5EFE6; font-size: 16px; }
   .compose-row input:focus { outline: none; border-color: #E8A33D; }
   .sketch-btn, .send-btn { background: #E8A33D; border: none; border-radius: 50%; width: 42px; height: 42px; font-size: 16px; cursor: pointer; flex-shrink: 0; display:flex; align-items:center; justify-content:center; }
   .send-btn { border-radius: 22px; width: auto; padding: 0 18px; font-weight: 600; color: #2C1E30; }
   .wish-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(245,239,230,0.08); }
   .wish-row input[type=checkbox] { width: 18px; height: 18px; accent-color: #E8A33D; }
   .wish-input-row { display: flex; gap: 8px; margin-top: 14px; }
-  .wish-input-row input { flex: 1; background: #1F1522; border: 1px solid #45364A; border-radius: 10px; padding: 10px; color: #F5EFE6; }
+  .wish-input-row input { flex: 1; background: #1F1522; border: 1px solid #45364A; border-radius: 10px; padding: 10px; color: #F5EFE6; font-size: 16px; }
   .wish-input-row button { background: #E8A33D; border: none; border-radius: 10px; padding: 10px 16px; font-weight: 600; color: #2C1E30; cursor: pointer; }
   .game-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
   .game-tab { background: #2C1E30; color: #8A7690; border: none; border-radius: 20px; padding: 8px 12px; font-size: 12px; cursor: pointer; }
@@ -101,9 +109,12 @@
   .surprise-content .emoji { font-size: 40px; margin-bottom: 14px; }
   .surprise-content p { font-size: 15px; line-height: 1.5; margin-bottom: 20px; }
   .surprise-content button { background: #E8A33D; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 600; cursor: pointer; }
-  .preview-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 80; align-items: center; justify-content: center; padding: 20px; cursor: pointer; }
+  .preview-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 90; align-items: center; justify-content: center; padding: 20px; cursor: pointer; }
   .preview-modal.open { display: flex; }
-  .preview-modal img { max-width: 90%; max-height: 85%; border-radius: 14px; }
+  .preview-modal img { max-width: 92%; max-height: 88%; border-radius: 10px; object-fit: contain; }
+  .call-video { border-radius: 14px; background: #111; object-fit: cover; transition: all 0.25s; }
+  .call-video.big-vid { width: 100%; max-width: 320px; height: auto; position: relative; }
+  .call-video.small-vid { width: 100px; height: 130px; position: absolute; bottom: 100px; right: 24px; border: 2px solid #E8A33D; z-index: 65; }
 </style>
 </head>
 <body>
@@ -157,6 +168,10 @@
   </div>
   <div class="typing-indicator" id="typingIndicator"></div>
   <div id="chatBox" class="chat-box"></div>
+  <div class="reply-bar" id="replyBar">
+    <div class="reply-bar-text" id="replyBarText"></div>
+    <button class="reply-bar-cancel" id="replyBarCancel">✕</button>
+  </div>
   <div class="compose-row">
     <button class="sketch-btn" id="openSketchBtn">✎</button>
     <label class="sketch-btn" for="photoInput">📷</label>
@@ -275,9 +290,9 @@
 </div>
 
 <div class="sketch-modal" id="callModal">
-  <video id="remoteVideo" autoplay playsinline style="width:100%; max-width:320px; border-radius:14px; background:#111;"></video>
-  <video id="localVideo" autoplay muted playsinline style="width:100px; border-radius:10px; background:#000; position:absolute; bottom:100px; right:24px;"></video>
-  <div id="callStatusText" style="color:#F2B8C6; font-size:12px; margin-top:10px;"></div>
+  <video id="remoteVideo" class="call-video big-vid" autoplay playsinline></video>
+  <video id="localVideo" class="call-video small-vid" autoplay muted playsinline></video>
+  <div id="callStatusText" style="color:#F2B8C6; font-size:12px; margin-top:10px;">tap either video to swap</div>
   <div class="sketch-controls">
     <button id="closeCallTestBtn" style="background:#2C1E30; color:#F5EFE6;">hang up</button>
   </div>
@@ -407,6 +422,45 @@
     return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   }
 
+  // ---- Swipe to reply ----
+  let replyingTo = null;
+  function labelForMsg(msg) {
+    if (msg.type === "photo") return "📷 Photo";
+    if (msg.type === "sketch") return "✎ Sketch";
+    if (msg.type === "voice") return "🎤 Voice note";
+    return (msg.text_body || "").slice(0, 40);
+  }
+  function setReply(msg) {
+    replyingTo = { sender: msg.sender, preview: labelForMsg(msg) };
+    const senderLabel = msg.sender === CURRENT_USER ? "You" : document.getElementById("chatPartnerName").textContent;
+    document.getElementById("replyBarText").textContent = `${senderLabel}: ${replyingTo.preview}`;
+    document.getElementById("replyBar").classList.add("open");
+  }
+  document.getElementById("replyBarCancel").addEventListener("click", () => {
+    replyingTo = null;
+    document.getElementById("replyBar").classList.remove("open");
+  });
+
+  function attachSwipe(wrap, msg) {
+    let startX = 0, currentX = 0, swiping = false;
+    wrap.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+      swiping = true;
+    });
+    wrap.addEventListener("touchmove", (e) => {
+      if (!swiping) return;
+      currentX = e.touches[0].clientX - startX;
+      if (currentX > 0 && currentX < 70) {
+        wrap.style.transform = `translateX(${currentX}px)`;
+      }
+    });
+    wrap.addEventListener("touchend", () => {
+      if (currentX > 45) setReply(msg);
+      wrap.style.transform = "translateX(0)";
+      swiping = false; currentX = 0;
+    });
+  }
+
   async function loadChat() {
     const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: true });
     if (error) return;
@@ -418,10 +472,17 @@
 
       const b = document.createElement("div");
       b.className = "bubble " + (msg.sender === CURRENT_USER ? "me" : "them");
+
+      if (msg.reply_preview) {
+        const quote = document.createElement("div");
+        quote.className = "reply-quote";
+        quote.textContent = msg.reply_preview;
+        b.appendChild(quote);
+      }
+
       if ((msg.type === "sketch" || msg.type === "photo") && msg.sketch_data) {
         const img = document.createElement("img");
         img.src = msg.sketch_data;
-        img.style.cursor = "pointer";
         img.addEventListener("click", (e) => { e.stopPropagation(); openPreview(msg.sketch_data); });
         b.appendChild(img);
       } else if (msg.type === "voice" && msg.sketch_data) {
@@ -431,7 +492,9 @@
         audio.style.maxWidth = "200px";
         b.appendChild(audio);
       } else {
-        b.textContent = msg.text_body || "";
+        const textSpan = document.createElement("span");
+        textSpan.textContent = msg.text_body || "";
+        b.appendChild(textSpan);
       }
       wrap.appendChild(b);
 
@@ -502,7 +565,7 @@
       }
 
       wrap.appendChild(meta);
-
+      attachSwipe(wrap, msg);
       box.appendChild(wrap);
     });
     box.scrollTop = box.scrollHeight;
@@ -512,8 +575,15 @@
     const input = document.getElementById("chatInput");
     const text = input.value.trim();
     if (!text) return;
-    await sb.from("messages").insert({ sender: CURRENT_USER, type: "text", text_body: text });
+    const payload = { sender: CURRENT_USER, type: "text", text_body: text };
+    if (replyingTo) {
+      const senderLabel = replyingTo.sender === CURRENT_USER ? "You" : document.getElementById("chatPartnerName").textContent;
+      payload.reply_preview = `${senderLabel}: ${replyingTo.preview}`;
+    }
+    await sb.from("messages").insert(payload);
     input.value = "";
+    replyingTo = null;
+    document.getElementById("replyBar").classList.remove("open");
     touchPresence(false);
     loadChat();
   });
@@ -853,28 +923,48 @@
 
   const ICE_SERVERS = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-  // ---- Ring tones (generated, no audio file needed) ----
+  // ---- Ring tones: shared context, longer WhatsApp-style ring cycle ----
   let ringInterval = null;
-  function startTone(freq, pattern) {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function beep() {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+  let sharedAudioCtx = null;
+  function unlockAudio() {
+    if (!sharedAudioCtx) sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
+  }
+  document.addEventListener("click", unlockAudio);
+  document.addEventListener("touchstart", unlockAudio);
+
+  function startTone(freq) {
+    unlockAudio();
+    function ringOnce() {
+      const osc = sharedAudioCtx.createOscillator();
+      const gain = sharedAudioCtx.createGain();
+      osc.type = "sine";
       osc.frequency.value = freq;
       osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.connect(sharedAudioCtx.destination);
+      gain.gain.setValueAtTime(0.001, sharedAudioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.18, sharedAudioCtx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.18, sharedAudioCtx.currentTime + 1.6);
+      gain.gain.exponentialRampToValueAtTime(0.001, sharedAudioCtx.currentTime + 1.8);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.4);
+      osc.stop(sharedAudioCtx.currentTime + 1.9);
     }
-    beep();
-    ringInterval = setInterval(beep, pattern);
-    return audioCtx;
+    ringOnce();
+    ringInterval = setInterval(ringOnce, 4000);
   }
   function stopTone() {
     if (ringInterval) { clearInterval(ringInterval); ringInterval = null; }
   }
- 
+
+  // ---- Tap-to-swap videos ----
+  function swapVideos() {
+    const r = document.getElementById("remoteVideo");
+    const l = document.getElementById("localVideo");
+    [r, l].forEach(v => { v.classList.toggle("big-vid"); v.classList.toggle("small-vid"); });
+  }
+  document.getElementById("remoteVideo").addEventListener("click", swapVideos);
+  document.getElementById("localVideo").addEventListener("click", swapVideos);
+
   function setupPeerConnection() {
     peerConnection = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
@@ -883,9 +973,9 @@
     peerConnection.ontrack = (event) => {
       event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
     };
-       peerConnection.onconnectionstatechange = () => {
+    peerConnection.onconnectionstatechange = () => {
       if (peerConnection.connectionState === "connected") {
-        document.getElementById("callStatusText").textContent = "connected ✓";
+        document.getElementById("callStatusText").textContent = "connected ✓ — tap either video to swap";
         stopTone();
       }
     };
@@ -896,7 +986,7 @@
     document.getElementById("localVideo").srcObject = localStream;
     document.getElementById("callModal").classList.add("open");
     document.getElementById("callStatusText").textContent = "calling...";
-       startTone(440, 1500);
+    startTone(425);
     appliedRemoteAnswer = false;
     appliedIce = new Set();
 
@@ -928,7 +1018,7 @@
   document.getElementById("startVideoCallBtn").addEventListener("click", () => startCall(true));
   document.getElementById("startVoiceCallBtn").addEventListener("click", () => startCall(false));
 
-   async function endCall() {
+  async function endCall() {
     document.getElementById("callModal").classList.remove("open");
     stopTone();
     document.getElementById("callStatusText").textContent = "";
@@ -938,17 +1028,16 @@
   }
   document.getElementById("closeCallTestBtn").addEventListener("click", endCall);
 
-  // ---- Receiving calls ----
   let incomingCallData = null;
 
-    document.getElementById("declineCallBtn").addEventListener("click", async () => {
+  document.getElementById("declineCallBtn").addEventListener("click", async () => {
     stopTone();
     if (incomingCallData) await sb.from("calls").update({ status: "declined" }).eq("id", incomingCallData.id);
     document.getElementById("incomingCallModal").classList.remove("open");
     incomingCallData = null;
   });
 
-    document.getElementById("acceptCallBtn").addEventListener("click", async () => {
+  document.getElementById("acceptCallBtn").addEventListener("click", async () => {
     stopTone();
     document.getElementById("incomingCallModal").classList.remove("open");
     const call = incomingCallData;
@@ -958,7 +1047,7 @@
     document.getElementById("localVideo").srcObject = localStream;
     document.getElementById("callModal").classList.add("open");
     document.getElementById("callStatusText").textContent = "connecting...";
-    appliedRemoteAnswer = true; // callee never needs to apply an "answer" to itself
+    appliedRemoteAnswer = true;
     appliedIce = new Set();
 
     setupPeerConnection();
@@ -976,7 +1065,6 @@
     currentCallId = call.id;
     await sb.from("calls").update({ answer: JSON.stringify(answer), status: "accepted" }).eq("id", call.id);
 
-    // Apply any ICE candidates the caller already saved before we accepted
     if (call.caller_ice && call.caller_ice.length) {
       for (const c of call.caller_ice) {
         const key = JSON.stringify(c);
@@ -992,7 +1080,6 @@
     }, 2000);
   });
 
-  // ---- Realtime: incoming calls + ICE/answer exchange ----
   sb.channel("calls-channel")
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "calls" }, (payload) => {
       const call = payload.new;
@@ -1001,21 +1088,26 @@
         document.getElementById("incomingCallIcon").textContent = call.type === "video" ? "📹" : "📞";
         document.getElementById("incomingCallText").textContent = `Incoming ${call.type} call...`;
         document.getElementById("incomingCallModal").classList.add("open");
-               startTone(880, 800);
+        startTone(950);
       }
     })
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "calls" }, async (payload) => {
       const call = payload.new;
+
+      if (incomingCallData && call.id === incomingCallData.id && (call.status === "ended" || call.status === "declined")) {
+        stopTone();
+        document.getElementById("incomingCallModal").classList.remove("open");
+        incomingCallData = null;
+      }
+
       if (!currentCallId || call.id !== currentCallId || !peerConnection) return;
 
-      // Caller: apply Favour's answer once it arrives
       if (call.caller === CURRENT_USER && call.answer && !appliedRemoteAnswer) {
         appliedRemoteAnswer = true;
         await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(call.answer)));
         document.getElementById("callStatusText").textContent = "connecting...";
       }
 
-      // Whoever I am, apply the OTHER side's ICE candidates as they arrive
       const theirIceField = CURRENT_USER === call.caller ? "callee_ice" : "caller_ice";
       const theirIce = call[theirIceField] || [];
       for (const c of theirIce) {
@@ -1026,7 +1118,6 @@
         }
       }
 
-      // If the other side ended/declined, close our modal too
       if ((call.status === "ended" || call.status === "declined") && document.getElementById("callModal").classList.contains("open")) {
         document.getElementById("callStatusText").textContent = call.status === "declined" ? "call declined" : "call ended";
         setTimeout(endCall, 1200);
@@ -1034,7 +1125,6 @@
     })
     .subscribe();
 
-  // ---- Init ----
   setUser(CURRENT_USER);
   loadDayCount();
   updateClocks();
