@@ -261,7 +261,8 @@
 </div>
 
 <div class="sketch-modal" id="callModal">
-  <video id="localVideo" autoplay muted playsinline style="width:100%; max-width:280px; border-radius:14px; background:#000;"></video>
+  <video id="remoteVideo" autoplay playsinline style="width:100%; max-width:320px; border-radius:14px; background:#111;"></video>
+  <video id="localVideo" autoplay muted playsinline style="width:100px; border-radius:10px; background:#000; position:absolute; bottom:100px; right:24px;"></video>
   <div class="sketch-controls">
     <button id="closeCallTestBtn" style="background:#2C1E30; color:#F5EFE6;">close</button>
   </div>
@@ -853,15 +854,61 @@
     }
   }
 
-  document.getElementById("startVideoCallBtn").addEventListener("click", () => testMedia(true));
-  document.getElementById("startVoiceCallBtn").addEventListener("click", () => testMedia(false));
+    // ---- Real calling: WebRTC setup ----
+  let peerConnection = null;
+  let currentCallId = null;
+  let remoteStream = null;
 
-  document.getElementById("closeCallTestBtn").addEventListener("click", () => {
+  const ICE_SERVERS = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  };
+
+  async function startCall(withVideo) {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: withVideo, audio: true });
+    document.getElementById("localVideo").srcObject = localStream;
+    document.getElementById("callModal").classList.add("open");
+
+    peerConnection = new RTCPeerConnection(ICE_SERVERS);
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+    remoteStream = new MediaStream();
+    document.getElementById("remoteVideo").srcObject = remoteStream;
+    peerConnection.ontrack = (event) => {
+      event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+    };
+
+    const myIceCandidates = [];
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) myIceCandidates.push(event.candidate.toJSON());
+    };
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+
+    const { data, error } = await sb.from("calls").insert({
+      caller: CURRENT_USER,
+      callee: partnerOf(CURRENT_USER),
+      type: withVideo ? "video" : "voice",
+      offer: JSON.stringify(offer),
+      status: "ringing"
+    }).select().single();
+
+    if (error) { document.getElementById("status").textContent = "call failed to start 😕"; return; }
+    currentCallId = data.id;
+
+    setTimeout(async () => {
+      await sb.from("calls").update({ caller_ice: myIceCandidates }).eq("id", currentCallId);
+    }, 2000);
+  }
+
+  document.getElementById("startVideoCallBtn").addEventListener("click", () => startCall(true));
+  document.getElementById("startVoiceCallBtn").addEventListener("click", () => startCall(false));
+
+  document.getElementById("closeCallTestBtn").addEventListener("click", async () => {
     document.getElementById("callModal").classList.remove("open");
-    if (localStream) {
-      localStream.getTracks().forEach(t => t.stop());
-      localStream = null;
-    }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    if (peerConnection) { peerConnection.close(); peerConnection = null; }
+    if (currentCallId) { await sb.from("calls").update({ status: "ended" }).eq("id", currentCallId); currentCallId = null; }
   });
  
   if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js"); }
