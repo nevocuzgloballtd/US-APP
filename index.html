@@ -36,6 +36,7 @@
   .who-btn { flex: 1; background: #E8A33D; border: none; border-radius: 10px; padding: 8px; font-size: 12px; font-weight: 600; color: #2C1E30; cursor: pointer; }
   .who-btn.inactive { background: #2C1E30; color: #8A7690; }
   .chat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .call-btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
   .avatar { width: 38px; height: 38px; border-radius: 50%; background: #E8A33D; color: #2C1E30; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 16px; position: relative; }
   .online-dot { width: 10px; height: 10px; border-radius: 50%; background: #4CAF50; position: absolute; bottom: 0; right: 0; border: 2px solid #1F1522; display: none; }
   .online-dot.on { display: block; }
@@ -143,9 +144,11 @@
 </div>
 
 <div class="screen" id="screen-chat">
+  <div class="call-btn-row">
+    <button id="startVideoCallBtn" style="background:#45364A; border:none; border-radius:10px; padding:8px 12px; color:#F5EFE6; font-size:12px;">📹 video call</button>
+    <button id="startVoiceCallBtn" style="background:#45364A; border:none; border-radius:10px; padding:8px 12px; color:#F5EFE6; font-size:12px;">📞 voice call</button>
+  </div>
   <div class="chat-header">
-   <button id="startVideoCallBtn" style="background:#45364A; border:none; border-radius:10px; padding:8px 12px; color:#F5EFE6; font-size:12px; margin-bottom:10px;">📹 test video call</button>
-<button id="startVoiceCallBtn" style="background:#45364A; border:none; border-radius:10px; padding:8px 12px; color:#F5EFE6; font-size:12px; margin-bottom:10px; margin-left:8px;">📞 test voice call</button>
     <div class="avatar" id="chatAvatar">F<span class="online-dot" id="onlineDot"></span></div>
     <div>
       <div class="chat-name" id="chatPartnerName">Favour</div>
@@ -157,7 +160,7 @@
   <div class="compose-row">
     <button class="sketch-btn" id="openSketchBtn">✎</button>
     <label class="sketch-btn" for="photoInput">📷</label>
-   <button class="sketch-btn" id="micBtn">🎤</button>
+    <button class="sketch-btn" id="micBtn">🎤</button>
     <input type="file" accept="image/*" id="photoInput" style="display:none;">
     <input id="chatInput" type="text" placeholder="write something...">
     <button class="send-btn" id="sendChatBtn">send</button>
@@ -260,14 +263,26 @@
   <img id="previewImg">
 </div>
 
+<div class="surprise-modal" id="incomingCallModal">
+  <div class="surprise-content">
+    <div class="emoji" id="incomingCallIcon">📞</div>
+    <p id="incomingCallText">Incoming call...</p>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button id="declineCallBtn" style="background:#8A7690; border:none; border-radius:10px; padding:10px 20px; font-weight:600; cursor:pointer;">decline</button>
+      <button id="acceptCallBtn" style="background:#E8A33D; border:none; border-radius:10px; padding:10px 20px; font-weight:600; cursor:pointer;">accept</button>
+    </div>
+  </div>
+</div>
+
 <div class="sketch-modal" id="callModal">
   <video id="remoteVideo" autoplay playsinline style="width:100%; max-width:320px; border-radius:14px; background:#111;"></video>
   <video id="localVideo" autoplay muted playsinline style="width:100px; border-radius:10px; background:#000; position:absolute; bottom:100px; right:24px;"></video>
+  <div id="callStatusText" style="color:#F2B8C6; font-size:12px; margin-top:10px;"></div>
   <div class="sketch-controls">
-    <button id="closeCallTestBtn" style="background:#2C1E30; color:#F5EFE6;">close</button>
+    <button id="closeCallTestBtn" style="background:#2C1E30; color:#F5EFE6;">hang up</button>
   </div>
 </div>
- 
+
 <script>
   const SUPABASE_URL = "https://oewhhcleehkhjjyliivb.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ld2hoY2xlZWhraGpqeWxpaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MTUwOTIsImV4cCI6MjEwNDE5MTA5Mn0.3IYP_WYYniWFdwwfq9dWJHMLCDUicsnTONUn_uOCgpg";
@@ -403,7 +418,7 @@
 
       const b = document.createElement("div");
       b.className = "bubble " + (msg.sender === CURRENT_USER ? "me" : "them");
-            if ((msg.type === "sketch" || msg.type === "photo") && msg.sketch_data) {
+      if ((msg.type === "sketch" || msg.type === "photo") && msg.sketch_data) {
         const img = document.createElement("img");
         img.src = msg.sketch_data;
         img.style.cursor = "pointer";
@@ -455,7 +470,7 @@
         picker.classList.toggle("open");
       });
 
-            const meta = document.createElement("div");
+      const meta = document.createElement("div");
       meta.className = "msg-meta";
       meta.textContent = timeAgoLabel(msg.created_at) + (msg.edited ? " (edited)" : "");
 
@@ -600,7 +615,6 @@
     }, "image/png");
   });
 
-  // ---- Voice notes ----
   let mediaRecorder;
   let audioChunks = [];
   let isRecording = false;
@@ -639,7 +653,7 @@
       micBtn.style.background = "#E8A33D";
     }
   });
- 
+
   document.getElementById("memoryInput").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -829,54 +843,40 @@
     renderTot();
   });
 
-  setUser(CURRENT_USER);
-  loadDayCount();
-  updateClocks();
-  renderTot();
-  loadWishlist();
-  loadGame();
-  loadTapRace();
-  loadMemories();
-
-    setInterval(updateClocks, 1000);
-  setInterval(() => touchPresence(document.getElementById("chatInput") === document.activeElement), 10000);
-
-  // ---- Piece 2: camera/mic test (no connection yet) ----
+  // ============ CALLING (WebRTC) ============
   let localStream = null;
-
-  async function testMedia(withVideo) {
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: withVideo, audio: true });
-      document.getElementById("localVideo").srcObject = localStream;
-      document.getElementById("callModal").classList.add("open");
-    } catch (err) {
-      document.getElementById("status").textContent = "camera/mic access denied 😕";
-    }
-  }
-
-    // ---- Real calling: WebRTC setup ----
   let peerConnection = null;
   let currentCallId = null;
   let remoteStream = null;
+  let appliedRemoteAnswer = false;
+  let appliedIce = new Set();
 
-  const ICE_SERVERS = {
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-  };
+  const ICE_SERVERS = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-  async function startCall(withVideo) {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: withVideo, audio: true });
-    document.getElementById("localVideo").srcObject = localStream;
-    document.getElementById("callModal").classList.add("open");
-
+  function setupPeerConnection() {
     peerConnection = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
     remoteStream = new MediaStream();
     document.getElementById("remoteVideo").srcObject = remoteStream;
     peerConnection.ontrack = (event) => {
       event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
     };
+    peerConnection.onconnectionstatechange = () => {
+      if (peerConnection.connectionState === "connected") {
+        document.getElementById("callStatusText").textContent = "connected ✓";
+      }
+    };
+  }
 
+  async function startCall(withVideo) {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: withVideo, audio: true });
+    document.getElementById("localVideo").srcObject = localStream;
+    document.getElementById("callModal").classList.add("open");
+    document.getElementById("callStatusText").textContent = "calling...";
+    appliedRemoteAnswer = false;
+    appliedIce = new Set();
+
+    setupPeerConnection();
     const myIceCandidates = [];
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) myIceCandidates.push(event.candidate.toJSON());
@@ -904,15 +904,123 @@
   document.getElementById("startVideoCallBtn").addEventListener("click", () => startCall(true));
   document.getElementById("startVoiceCallBtn").addEventListener("click", () => startCall(false));
 
-  document.getElementById("closeCallTestBtn").addEventListener("click", async () => {
+  async function endCall() {
     document.getElementById("callModal").classList.remove("open");
+    document.getElementById("callStatusText").textContent = "";
     if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
     if (peerConnection) { peerConnection.close(); peerConnection = null; }
     if (currentCallId) { await sb.from("calls").update({ status: "ended" }).eq("id", currentCallId); currentCallId = null; }
+  }
+  document.getElementById("closeCallTestBtn").addEventListener("click", endCall);
+
+  // ---- Receiving calls ----
+  let incomingCallData = null;
+
+  document.getElementById("declineCallBtn").addEventListener("click", async () => {
+    if (incomingCallData) await sb.from("calls").update({ status: "declined" }).eq("id", incomingCallData.id);
+    document.getElementById("incomingCallModal").classList.remove("open");
+    incomingCallData = null;
   });
- 
+
+  document.getElementById("acceptCallBtn").addEventListener("click", async () => {
+    document.getElementById("incomingCallModal").classList.remove("open");
+    const call = incomingCallData;
+    const withVideo = call.type === "video";
+
+    localStream = await navigator.mediaDevices.getUserMedia({ video: withVideo, audio: true });
+    document.getElementById("localVideo").srcObject = localStream;
+    document.getElementById("callModal").classList.add("open");
+    document.getElementById("callStatusText").textContent = "connecting...";
+    appliedRemoteAnswer = true; // callee never needs to apply an "answer" to itself
+    appliedIce = new Set();
+
+    setupPeerConnection();
+    const myIceCandidates = [];
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) myIceCandidates.push(event.candidate.toJSON());
+    };
+
+    const offer = JSON.parse(call.offer);
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+
+    currentCallId = call.id;
+    await sb.from("calls").update({ answer: JSON.stringify(answer), status: "accepted" }).eq("id", call.id);
+
+    // Apply any ICE candidates the caller already saved before we accepted
+    if (call.caller_ice && call.caller_ice.length) {
+      for (const c of call.caller_ice) {
+        const key = JSON.stringify(c);
+        if (!appliedIce.has(key)) {
+          appliedIce.add(key);
+          await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+        }
+      }
+    }
+
+    setTimeout(async () => {
+      await sb.from("calls").update({ callee_ice: myIceCandidates }).eq("id", currentCallId);
+    }, 2000);
+  });
+
+  // ---- Realtime: incoming calls + ICE/answer exchange ----
+  sb.channel("calls-channel")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "calls" }, (payload) => {
+      const call = payload.new;
+      if (call.callee === CURRENT_USER && call.status === "ringing") {
+        incomingCallData = call;
+        document.getElementById("incomingCallIcon").textContent = call.type === "video" ? "📹" : "📞";
+        document.getElementById("incomingCallText").textContent = `Incoming ${call.type} call...`;
+        document.getElementById("incomingCallModal").classList.add("open");
+      }
+    })
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "calls" }, async (payload) => {
+      const call = payload.new;
+      if (!currentCallId || call.id !== currentCallId || !peerConnection) return;
+
+      // Caller: apply Favour's answer once it arrives
+      if (call.caller === CURRENT_USER && call.answer && !appliedRemoteAnswer) {
+        appliedRemoteAnswer = true;
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(call.answer)));
+        document.getElementById("callStatusText").textContent = "connecting...";
+      }
+
+      // Whoever I am, apply the OTHER side's ICE candidates as they arrive
+      const theirIceField = CURRENT_USER === call.caller ? "callee_ice" : "caller_ice";
+      const theirIce = call[theirIceField] || [];
+      for (const c of theirIce) {
+        const key = JSON.stringify(c);
+        if (!appliedIce.has(key)) {
+          appliedIce.add(key);
+          try { await peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
+        }
+      }
+
+      // If the other side ended/declined, close our modal too
+      if ((call.status === "ended" || call.status === "declined") && document.getElementById("callModal").classList.contains("open")) {
+        document.getElementById("callStatusText").textContent = call.status === "declined" ? "call declined" : "call ended";
+        setTimeout(endCall, 1200);
+      }
+    })
+    .subscribe();
+
+  // ---- Init ----
+  setUser(CURRENT_USER);
+  loadDayCount();
+  updateClocks();
+  renderTot();
+  loadWishlist();
+  loadGame();
+  loadTapRace();
+  loadMemories();
+
+  setInterval(updateClocks, 1000);
+  setInterval(() => touchPresence(document.getElementById("chatInput") === document.activeElement), 10000);
+
   if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js"); }
-   // ---- Realtime: instant updates instead of constant polling ----
+
   sb.channel("room1")
     .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, loadChat)
     .on("postgres_changes", { event: "*", schema: "public", table: "hugs" }, checkForHugs)
