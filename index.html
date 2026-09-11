@@ -155,6 +155,7 @@
   <div class="compose-row">
     <button class="sketch-btn" id="openSketchBtn">✎</button>
     <label class="sketch-btn" for="photoInput">📷</label>
+   <button class="sketch-btn" id="micBtn">🎤</button>
     <input type="file" accept="image/*" id="photoInput" style="display:none;">
     <input id="chatInput" type="text" placeholder="write something...">
     <button class="send-btn" id="sendChatBtn">send</button>
@@ -392,12 +393,18 @@
 
       const b = document.createElement("div");
       b.className = "bubble " + (msg.sender === CURRENT_USER ? "me" : "them");
-      if ((msg.type === "sketch" || msg.type === "photo") && msg.sketch_data) {
+            if ((msg.type === "sketch" || msg.type === "photo") && msg.sketch_data) {
         const img = document.createElement("img");
         img.src = msg.sketch_data;
         img.style.cursor = "pointer";
         img.addEventListener("click", (e) => { e.stopPropagation(); openPreview(msg.sketch_data); });
         b.appendChild(img);
+      } else if (msg.type === "voice" && msg.sketch_data) {
+        const audio = document.createElement("audio");
+        audio.src = msg.sketch_data;
+        audio.controls = true;
+        audio.style.maxWidth = "200px";
+        b.appendChild(audio);
       } else {
         b.textContent = msg.text_body || "";
       }
@@ -583,6 +590,46 @@
     }, "image/png");
   });
 
+  // ---- Voice notes ----
+  let mediaRecorder;
+  let audioChunks = [];
+  let isRecording = false;
+
+  document.getElementById("micBtn").addEventListener("click", async () => {
+    const micBtn = document.getElementById("micBtn");
+    if (!isRecording) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(audioChunks, { type: "audio/webm" });
+          document.getElementById("status").textContent = "uploading voice note...";
+          const fileName = `voice_${Date.now()}.webm`;
+          const { error } = await sb.storage.from("photos").upload(fileName, blob);
+          if (error) { document.getElementById("status").textContent = "upload failed 😕"; return; }
+          const { data: urlData } = sb.storage.from("photos").getPublicUrl(fileName);
+          await sb.from("messages").insert({ sender: CURRENT_USER, type: "voice", sketch_data: urlData.publicUrl });
+          document.getElementById("status").textContent = "voice note sent 🎤";
+          loadChat();
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        micBtn.textContent = "⏹️";
+        micBtn.style.background = "#F2B8C6";
+      } catch (err) {
+        document.getElementById("status").textContent = "mic access denied 😕";
+      }
+    } else {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      isRecording = false;
+      micBtn.textContent = "🎤";
+      micBtn.style.background = "#E8A33D";
+    }
+  });
+ 
   document.getElementById("memoryInput").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
