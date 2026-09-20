@@ -115,10 +115,25 @@
   .call-video { border-radius: 14px; background: #111; object-fit: cover; transition: all 0.25s; }
   .call-video.big-vid { width: 100%; max-width: 320px; height: auto; position: relative; }
   .call-video.small-vid { width: 100px; height: 130px; position: absolute; bottom: 100px; right: 24px; border: 2px solid #E8A33D; z-index: 65; }
+   .lock-screen { position: fixed; inset: 0; background: #1F1522; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
+  .lock-screen .lock-emoji { font-size: 44px; margin-bottom: 14px; }
+  .lock-screen input { width: 100%; max-width: 280px; background: #2C1E30; border: 1px solid #45364A; border-radius: 12px; padding: 14px; color: #F5EFE6; font-size: 16px; text-align: center; margin-top: 18px; }
+  .lock-screen input:focus { outline: none; border-color: #E8A33D; }
+  .lock-screen button { width: 100%; max-width: 280px; margin-top: 12px; background: #E8A33D; color: #2C1E30; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  #lockError { color: #F2B8C6; font-size: 12px; margin-top: 12px; min-height: 16px; }
 </style>
 </head>
 <body>
 
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-emoji">🔒</div>
+  <h1 class="app-title">Our Little World</h1>
+  <div class="app-subtitle" style="margin-bottom:0;">just for the two of us</div>
+  <input type="password" id="lockInput" placeholder="password" autocomplete="current-password">
+  <button id="lockBtn">unlock</button>
+  <div id="lockError"></div>
+</div>
+ 
 <div class="who-bar">
   <button class="who-btn" id="whoIsreal">I'm Isreal</button>
   <button class="who-btn inactive" id="whoFavour">I'm Favour</button>
@@ -303,6 +318,44 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ld2hoY2xlZWhraGpqeWxpaXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MTUwOTIsImV4cCI6MjEwNDE5MTA5Mn0.3IYP_WYYniWFdwwfq9dWJHMLCDUicsnTONUn_uOCgpg";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const REACT_EMOJIS = ["❤️","😂","😭","👀","🔥"];
+   // ============ LOCK SCREEN ============
+  async function sha256(text) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  async function verifyHash(hash) {
+    const { data, error } = await sb.rpc("check_app_password", { p_hash: hash });
+    return !error && data === true;
+  }
+  function unlockApp() {
+    document.getElementById("lockScreen").style.display = "none";
+  }
+  async function tryUnlock() {
+    const input = document.getElementById("lockInput");
+    const errEl = document.getElementById("lockError");
+    const pw = input.value;
+    if (!pw) return;
+    errEl.textContent = "checking...";
+    const hash = await sha256(pw);
+    if (await verifyHash(hash)) {
+      localStorage.setItem("us_app_hash", hash);
+      input.value = "";
+      errEl.textContent = "";
+      unlockApp();
+    } else {
+      errEl.textContent = "wrong password 😕";
+      input.value = "";
+    }
+  }
+  document.getElementById("lockBtn").addEventListener("click", tryUnlock);
+  document.getElementById("lockInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") tryUnlock();
+  });
+  // Auto-unlock if this device already entered the right password
+  (async () => {
+    const saved = localStorage.getItem("us_app_hash");
+    if (saved && await verifyHash(saved)) unlockApp();
+  })();
 
   function openPreview(url) {
     document.getElementById("previewImg").src = url;
