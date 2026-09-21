@@ -82,6 +82,13 @@
   .game-panel.active { display: block; }
   .card.game-card { padding: 20px; }
   .ttt-cell { background: #1F1522; border: 1px solid #45364A; border-radius: 10px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; }
+  .ttt-wrap { position: relative; width: 220px; max-width: 100%; margin: 0 auto; }
+  .ttt-board { position: relative; z-index: 1; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .ttt-win-svg { position:absolute; inset:0; width:100%; height:100%; z-index:3; pointer-events:none; overflow:visible; }
+  .ttt-win-line { stroke:#F2B8C6; stroke-width:7; stroke-linecap:round; fill:none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); stroke-dasharray: 260; stroke-dashoffset:260; animation: tttDrawWin .42s ease-out forwards; }
+  @keyframes tttDrawWin { to { stroke-dashoffset:0; } }
+  .msg-checks { letter-spacing:-2px; font-size:11px; color:#8A7690; font-weight:700; }
+  .msg-checks.read { color:#F2B8C6; }
   .big-btn { width: 100%; padding: 18px; font-size: 16px; border-radius: 14px; border: none; background: #E8A33D; color: #2C1E30; font-weight: 700; cursor: pointer; }
   .this-or-that-row { display: flex; gap: 10px; }
   .this-or-that-row button { flex: 1; padding: 16px; border-radius: 12px; border: none; background: #1F1522; color: #F5EFE6; font-size: 15px; cursor: pointer; }
@@ -221,7 +228,7 @@
   <div class="card game-card">
     <div class="game-panel active" id="panel-ttt">
       <div id="tttStatus" style="color:#F2B8C6; font-size:13px; margin-bottom:14px; text-align:center;"></div>
-      <div id="tttBoard" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:220px; margin:0 auto;"></div>
+      <div class="ttt-wrap"><div id="tttBoard" class="ttt-board"></div><svg id="tttWinSvg" class="ttt-win-svg" viewBox="0 0 220 220" preserveAspectRatio="none" aria-hidden="true"></svg></div>
       <button id="tttResetBtn" style="margin-top:16px; width:100%; background:#45364A; color:#F5EFE6; border:none; border-radius:10px; padding:10px;">reset game</button>
     </div>
     <div class="game-panel" id="panel-tap">
@@ -622,8 +629,13 @@
         const list = [...(current[emoji] || [])];
         if (!list.includes(CURRENT_USER)) list.push(CURRENT_USER);
         current[emoji] = list;
-        await sb.from("messages").update({ reactions: current }).eq("id", msg.id);
+        msg.reactions = current;
+        replaceMessage(msg);
         picker.classList.remove("open");
+        const { error } = await sb.from("messages").update({ reactions: current }).eq("id", msg.id);
+        if (error) {
+          msg.reactions = { ...(msg.reactions || {}) };
+        }
       });
       picker.appendChild(span);
     });
@@ -639,6 +651,15 @@
     meta.textContent = timeAgoLabel(msg.created_at) + (msg.edited ? " (edited)" : "");
 
     if (msg.sender === CURRENT_USER) {
+      const checks = document.createElement("span");
+      checks.className = "msg-checks";
+      checks.textContent = "✓✓";
+      // If a future message row includes read_at, the checks automatically become the
+      // little colored read indicator. Until then they stay neutral rather than lying
+      // about a read receipt.
+      if (msg.read_at) checks.classList.add("read");
+      checks.title = msg.read_at ? "read" : "delivered";
+      meta.appendChild(checks);
       const editBtn = document.createElement("span");
       editBtn.textContent = " ✎";
       editBtn.style.cursor = "pointer";
@@ -956,6 +977,32 @@
     if (error || !data) return;
     renderBoard(data);
   }
+  function renderTTTWinLine(board, winner) {
+    const svg = document.getElementById("tttWinSvg");
+    if (!svg) return;
+    svg.innerHTML = "";
+    if (!winner || winner === "draw") return;
+    const lineIndex = WIN_LINES.findIndex(([a,b,c]) => board[a] === winner && board[b] === winner && board[c] === winner);
+    if (lineIndex < 0) return;
+    const coords = [
+      [[16.67,16.67],[83.33,16.67]],
+      [[16.67,50],[83.33,50]],
+      [[16.67,83.33],[83.33,83.33]],
+      [[16.67,16.67],[16.67,83.33]],
+      [[50,16.67],[50,83.33]],
+      [[83.33,16.67],[83.33,83.33]],
+      [[16.67,16.67],[83.33,83.33]],
+      [[83.33,16.67],[16.67,83.33]]
+    ][lineIndex];
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", coords[0][0] + "%");
+    line.setAttribute("y1", coords[0][1] + "%");
+    line.setAttribute("x2", coords[1][0] + "%");
+    line.setAttribute("y2", coords[1][1] + "%");
+    line.classList.add("ttt-win-line");
+    svg.appendChild(line);
+  }
+
   function renderBoard(game) {
     const board = JSON.parse(game.board);
     const container = document.getElementById("tttBoard");
@@ -967,6 +1014,7 @@
       cell.addEventListener("click", () => makeMove(game, i));
       container.appendChild(cell);
     });
+    renderTTTWinLine(board, game.winner);
     const statusEl = document.getElementById("tttStatus");
     if (game.winner) statusEl.textContent = game.winner === "draw" ? "it's a draw! 😅" : `${game.winner} wins! 🎉`;
     else statusEl.textContent = game.turn === CURRENT_USER ? "your turn 👀" : "waiting for partner...";
