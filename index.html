@@ -173,6 +173,53 @@
   .lock-screen { backdrop-filter:blur(10px); }
   .lock-note { color:var(--muted); font-size:11px; margin-top:12px; text-align:center; max-width:280px; line-height:1.45; }
 
+
+  /* ===== RESPONSIVE APP SHELL ===== */
+  @media (min-width: 700px) {
+    body { padding-bottom: 24px; padding-left: 86px; }
+    .screen { max-width: 980px; padding: 30px 34px 34px; }
+    .who-bar { max-width: 980px; padding: 18px 34px 0; }
+    .chat-box { max-height: calc(100vh - 310px); min-height: 420px; }
+    .bubble { max-width: min(68%, 620px); }
+    .bubble img, .media-message { max-width: 320px; }
+    .memory-grid { grid-template-columns: repeat(3, 1fr); }
+    .memory-item img { height: 170px; }
+    .bottom-nav {
+      left: 0; right: auto; top: 0; bottom: 0; width: 86px;
+      height: 100vh; padding: 28px 8px; border-top: 0;
+      border-right: 1px solid rgba(245,239,230,.08);
+      flex-direction: column; justify-content: center; gap: 22px;
+    }
+    .nav-btn { width: 70px; padding: 9px 4px; border-radius: 14px; font-size: 10px; }
+    .nav-btn.active { background: rgba(216,138,154,.12); }
+    .nav-btn .icon { font-size: 21px; }
+    .chat-header { padding-top: 4px; }
+    .preview-modal { padding: 28px 100px; }
+    .preview-controls { display: flex !important; }
+  }
+  @media (max-width: 699px) {
+    .preview-controls { display: none !important; }
+  }
+  @media (min-width: 1200px) {
+    .screen { max-width: 1120px; }
+    .who-bar { max-width: 1120px; }
+  }
+
+  .preview-controls {
+    display:none;
+    position:absolute;
+    left:50%; bottom:64px; transform:translateX(-50%);
+    align-items:center; gap:6px; z-index:4;
+    background:rgba(12,9,15,.72); padding:6px; border-radius:14px;
+    backdrop-filter:blur(8px);
+  }
+  .preview-controls button {
+    min-width:36px; height:34px; padding:0 10px; border:0; border-radius:9px;
+    background:rgba(255,255,255,.12); color:#fff; font-size:13px; cursor:pointer;
+  }
+  .preview-controls button:hover { background:rgba(255,255,255,.2); }
+  .preview-zoom-label { min-width:54px; text-align:center; font-size:11px; color:#fff; }
+
 </style>
 </head>
 <body>
@@ -410,7 +457,13 @@
   <button class="preview-close" id="previewCloseBtn">×</button>
   <img id="previewImg" draggable="false">
   <video id="previewVideo" controls playsinline style="display:none;max-width:92%;max-height:88%;border-radius:10px;"></video>
-  <div class="preview-hint">pinch / wheel to zoom • drag to move • double tap to zoom</div>
+  <div class="preview-controls" id="previewControls">
+    <button id="previewZoomOut" title="Zoom out">−</button>
+    <div class="preview-zoom-label" id="previewZoomLabel">100%</div>
+    <button id="previewZoomIn" title="Zoom in">+</button>
+    <button id="previewZoomReset" title="Reset zoom">fit</button>
+  </div>
+  <div class="preview-hint">mouse wheel / + − to zoom • drag to move • double click to zoom</div>
 </div>
 
 <div class="sketch-modal media-send-modal" id="mediaSendModal">
@@ -519,11 +572,26 @@
   let previewScale = 1;
   let previewX = 0, previewY = 0, previewDragging = false, previewStartX = 0, previewStartY = 0;
   let previewLastTap = 0;
-  function applyPreviewTransform() {
-    const target = document.getElementById("previewVideo").style.display !== "none" ? document.getElementById("previewVideo") : document.getElementById("previewImg");
-    target.style.transform = `translate(${previewX}px,${previewY}px) scale(${previewScale})`;
+  let previewPointerMoved = false;
+
+  function currentPreviewTarget() {
+    const video = document.getElementById("previewVideo");
+    return video.style.display !== "none" ? video : document.getElementById("previewImg");
   }
-  function resetPreviewZoom() { previewScale = 1; previewX = 0; previewY = 0; applyPreviewTransform(); }
+  function applyPreviewTransform() {
+    const target = currentPreviewTarget();
+    target.style.transform = `translate3d(${previewX}px,${previewY}px,0) scale(${previewScale})`;
+    const label = document.getElementById("previewZoomLabel");
+    if (label) label.textContent = `${Math.round(previewScale * 100)}%`;
+  }
+  function resetPreviewZoom() {
+    previewScale = 1; previewX = 0; previewY = 0; applyPreviewTransform();
+  }
+  function changePreviewZoom(delta) {
+    previewScale = Math.max(1, Math.min(5, +(previewScale + delta).toFixed(2)));
+    if (previewScale === 1) { previewX = 0; previewY = 0; }
+    applyPreviewTransform();
+  }
   function openPreview(url, type = "photo") {
     const img = document.getElementById("previewImg");
     const video = document.getElementById("previewVideo");
@@ -539,6 +607,7 @@
       img.src = url;
     }
     document.getElementById("previewModal").classList.add("open");
+    applyPreviewTransform();
   }
   function closePreview() {
     const video = document.getElementById("previewVideo");
@@ -547,31 +616,49 @@
     resetPreviewZoom();
   }
   document.getElementById("previewCloseBtn").addEventListener("click", (e) => { e.stopPropagation(); closePreview(); });
-  document.getElementById("previewModal").addEventListener("click", (e) => { if (e.target.id === "previewModal") closePreview(); });
+  document.getElementById("previewModal").addEventListener("click", (e) => {
+    if (e.target.id === "previewModal" && !previewPointerMoved) closePreview();
+  });
+  document.getElementById("previewZoomIn").addEventListener("click", (e) => { e.stopPropagation(); changePreviewZoom(.25); });
+  document.getElementById("previewZoomOut").addEventListener("click", (e) => { e.stopPropagation(); changePreviewZoom(-.25); });
+  document.getElementById("previewZoomReset").addEventListener("click", (e) => { e.stopPropagation(); resetPreviewZoom(); });
+
   const previewModal = document.getElementById("previewModal");
-  previewModal.addEventListener("wheel", (e) => {
+  // Wheel zoom is attached directly to the viewer and the media itself so it works
+  // reliably in Chromium/Edge/Chrome when the app is running as a desktop PWA.
+  function handlePreviewWheel(e) {
     e.preventDefault();
-    previewScale = Math.max(1, Math.min(4, previewScale + (e.deltaY < 0 ? .2 : -.2)));
-    if (previewScale === 1) { previewX = 0; previewY = 0; }
-    applyPreviewTransform();
-  }, { passive:false });
+    e.stopPropagation();
+    changePreviewZoom(e.deltaY < 0 ? .2 : -.2);
+  }
+  previewModal.addEventListener("wheel", handlePreviewWheel, { passive:false });
+  document.getElementById("previewImg").addEventListener("wheel", handlePreviewWheel, { passive:false });
+  document.getElementById("previewVideo").addEventListener("wheel", handlePreviewWheel, { passive:false });
+
   previewModal.addEventListener("pointerdown", (e) => {
-    if (e.target.id === "previewCloseBtn") return;
+    if (e.target.id === "previewCloseBtn" || e.target.closest?.(".preview-controls")) return;
     const now = Date.now();
-    if (now - previewLastTap < 280) {
+    previewPointerMoved = false;
+    if (now - previewLastTap < 300) {
       previewScale = previewScale > 1 ? 1 : 2.2;
       if (previewScale === 1) { previewX = 0; previewY = 0; }
       applyPreviewTransform();
     }
     previewLastTap = now;
-    previewDragging = true; previewStartX = e.clientX - previewX; previewStartY = e.clientY - previewY;
+    previewDragging = true;
+    previewStartX = e.clientX - previewX;
+    previewStartY = e.clientY - previewY;
     previewModal.setPointerCapture?.(e.pointerId);
   });
   previewModal.addEventListener("pointermove", (e) => {
     if (!previewDragging || previewScale <= 1) return;
-    previewX = e.clientX - previewStartX; previewY = e.clientY - previewStartY; applyPreviewTransform();
+    previewPointerMoved = true;
+    previewX = e.clientX - previewStartX;
+    previewY = e.clientY - previewStartY;
+    applyPreviewTransform();
   });
   ["pointerup","pointercancel","pointerleave"].forEach(ev => previewModal.addEventListener(ev, () => { previewDragging = false; }));
+
   let pinchStartDistance = null;
   previewModal.addEventListener("touchmove", (e) => {
     if (e.touches.length !== 2) return;
@@ -581,8 +668,9 @@
     const dist = Math.hypot(dx, dy);
     if (pinchStartDistance == null) pinchStartDistance = dist;
     const ratio = dist / pinchStartDistance;
-    previewScale = Math.max(1, Math.min(4, previewScale * ratio));
+    previewScale = Math.max(1, Math.min(5, previewScale * ratio));
     pinchStartDistance = dist;
+    if (previewScale === 1) { previewX = 0; previewY = 0; }
     applyPreviewTransform();
   }, { passive:false });
   previewModal.addEventListener("touchend", () => { pinchStartDistance = null; });
