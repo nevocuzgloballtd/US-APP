@@ -324,18 +324,23 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
   }
   async function verifyHash(hash) {
-    const { data, error } = await sb.rpc("check_app_password", { p_hash: hash });
+  const { data, error } = await sb.rpc("check_app_password", {
+    p_hash: hash
+  });
 
-    console.log("PASSWORD CHECK:", { hash, data, error });
+  console.log("=== PASSWORD DEBUG ===");
+  console.log("Hash sent:", hash);
+  console.log("RPC data:", data);
+  console.log("RPC error:", error);
 
-    if (error) {
-      document.getElementById("lockError").textContent =
-        "Supabase error: " + error.message;
-      return false;
-    }
-
-    return data === true;
+  if (error) {
+    document.getElementById("lockError").textContent =
+      "DB ERROR: " + error.message;
+    return false;
   }
+
+  return data === true;
+}
   function unlockApp() {
     document.getElementById("lockScreen").style.display = "none";
   }
