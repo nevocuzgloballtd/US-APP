@@ -324,23 +324,24 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
   }
   async function verifyHash(hash) {
-  const { data, error } = await sb.rpc("check_app_password", {
-    p_hash: hash
-  });
+    const { data, error } = await sb.rpc("check_app_password", {
+      p_hash: hash
+    });
 
-  console.log("=== PASSWORD DEBUG ===");
-  console.log("Hash sent:", hash);
-  console.log("RPC data:", data);
-  console.log("RPC error:", error);
+    console.log("PASSWORD CHECK:", {
+      hash: hash,
+      data: data,
+      error: error
+    });
 
-  if (error) {
-    document.getElementById("lockError").textContent =
-      "DB ERROR: " + error.message;
-    return false;
+    if (error) {
+      document.getElementById("lockError").textContent =
+        "Supabase error: " + error.message;
+      return false;
+    }
+
+    return data === true;
   }
-
-  return data === true;
-}
   function unlockApp() {
     document.getElementById("lockScreen").style.display = "none";
   }
@@ -461,28 +462,63 @@
     document.getElementById("surpriseModal").classList.remove("open");
   });
 
-  async function touchPresence(typing) {
-    await sb.from("presence").update({ last_seen: new Date().toISOString(), is_typing: typing }).eq("user_name", CURRENT_USER);
+  // ---- Lightweight presence / typing ----
+  // Only write when the typing state changes, then send a small heartbeat periodically.
+  let typingTimeout = null;
+  let isTypingLocally = false;
+  let lastPresenceState = null;
+  let presenceWriteInFlight = false;
+
+  async function touchPresence(typing, force = false) {
+    if (!force && lastPresenceState === typing) return;
+    if (presenceWriteInFlight) return;
+    presenceWriteInFlight = true;
+    lastPresenceState = typing;
+    try {
+      await sb.from("presence").update({
+        last_seen: new Date().toISOString(),
+        is_typing: typing
+      }).eq("user_name", CURRENT_USER);
+    } finally {
+      presenceWriteInFlight = false;
+    }
   }
-  let typingTimeout;
+
   document.getElementById("chatInput").addEventListener("input", () => {
-    touchPresence(true);
+    if (!isTypingLocally) {
+      isTypingLocally = true;
+      touchPresence(true, true);
+    }
+
     clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => touchPresence(false), 2000);
+    typingTimeout = setTimeout(() => {
+      isTypingLocally = false;
+      touchPresence(false, true);
+    }, 2000);
   });
 
-  async function loadPresence() {
-    const partner = partnerOf(CURRENT_USER);
-    const { data, error } = await sb.from("presence").select("*").eq("user_name", partner).single();
-    if (error || !data) return;
+  function renderPresence(data) {
+    if (!data) return;
     const lastSeen = new Date(data.last_seen);
     const secsAgo = (Date.now() - lastSeen.getTime()) / 1000;
-    const online = secsAgo < 30;
+    const online = secsAgo < 35;
     document.getElementById("onlineDot").classList.toggle("on", online);
     document.getElementById("lastSeenText").textContent = online
       ? "online now 🟢"
       : "last seen " + lastSeen.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-    document.getElementById("typingIndicator").textContent = data.is_typing ? `${document.getElementById("chatPartnerName").textContent} is typing...` : "";
+    document.getElementById("typingIndicator").textContent = data.is_typing
+      ? `${document.getElementById("chatPartnerName").textContent} is typing...`
+      : "";
+  }
+
+  async function loadPresence() {
+    const partner = partnerOf(CURRENT_USER);
+    const { data, error } = await sb.from("presence")
+      .select("user_name,last_seen,is_typing")
+      .eq("user_name", partner)
+      .single();
+    if (error || !data) return;
+    renderPresence(data);
   }
 
   function timeAgoLabel(iso) {
@@ -528,131 +564,168 @@
     });
   }
 
+  function buildMessageElement(msg) {
+    const wrap = document.createElement("div");
+    wrap.className = "bubble-wrap " + (msg.sender === CURRENT_USER ? "me" : "them");
+    wrap.dataset.messageId = msg.id || "";
+
+    const b = document.createElement("div");
+    b.className = "bubble " + (msg.sender === CURRENT_USER ? "me" : "them");
+
+    if (msg.reply_preview) {
+      const quote = document.createElement("div");
+      quote.className = "reply-quote";
+      quote.textContent = msg.reply_preview;
+      b.appendChild(quote);
+    }
+
+    if ((msg.type === "sketch" || msg.type === "photo") && msg.sketch_data) {
+      const img = document.createElement("img");
+      img.src = msg.sketch_data;
+      img.loading = "lazy";
+      img.addEventListener("click", (e) => { e.stopPropagation(); openPreview(msg.sketch_data); });
+      b.appendChild(img);
+    } else if (msg.type === "voice" && msg.sketch_data) {
+      const audio = document.createElement("audio");
+      audio.src = msg.sketch_data;
+      audio.controls = true;
+      audio.preload = "none";
+      audio.style.maxWidth = "200px";
+      b.appendChild(audio);
+    } else {
+      const textSpan = document.createElement("span");
+      textSpan.textContent = msg.text_body || "";
+      b.appendChild(textSpan);
+    }
+    wrap.appendChild(b);
+
+    const reactions = msg.reactions || {};
+    const reactionRow = document.createElement("div");
+    reactionRow.className = "reaction-row";
+    Object.entries(reactions).forEach(([emoji, users]) => {
+      if (!users || users.length === 0) return;
+      const pill = document.createElement("span");
+      pill.className = "reaction-pill";
+      pill.textContent = `${emoji} ${users.length}`;
+      reactionRow.appendChild(pill);
+    });
+    wrap.appendChild(reactionRow);
+
+    const picker = document.createElement("div");
+    picker.className = "react-picker";
+    REACT_EMOJIS.forEach(emoji => {
+      const span = document.createElement("span");
+      span.textContent = emoji;
+      span.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const current = { ...(msg.reactions || {}) };
+        const list = [...(current[emoji] || [])];
+        if (!list.includes(CURRENT_USER)) list.push(CURRENT_USER);
+        current[emoji] = list;
+        await sb.from("messages").update({ reactions: current }).eq("id", msg.id);
+        picker.classList.remove("open");
+      });
+      picker.appendChild(span);
+    });
+    wrap.appendChild(picker);
+
+    b.addEventListener("click", (e) => {
+      if (e.target.tagName === "IMG" || e.target.tagName === "AUDIO") return;
+      picker.classList.toggle("open");
+    });
+
+    const meta = document.createElement("div");
+    meta.className = "msg-meta";
+    meta.textContent = timeAgoLabel(msg.created_at) + (msg.edited ? " (edited)" : "");
+
+    if (msg.sender === CURRENT_USER) {
+      const editBtn = document.createElement("span");
+      editBtn.textContent = " ✎";
+      editBtn.style.cursor = "pointer";
+      editBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (msg.type !== "text") return;
+        const newText = prompt("edit message:", msg.text_body);
+        if (newText === null || newText.trim() === "") return;
+        await sb.from("messages").update({ text_body: newText.trim(), edited: true }).eq("id", msg.id);
+      });
+
+      const delBtn = document.createElement("span");
+      delBtn.textContent = " 🗑️";
+      delBtn.style.cursor = "pointer";
+      delBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!confirm("delete this message?")) return;
+        await sb.from("messages").delete().eq("id", msg.id);
+      });
+
+      meta.appendChild(editBtn);
+      meta.appendChild(delBtn);
+    }
+
+    wrap.appendChild(meta);
+    attachSwipe(wrap, msg);
+    return wrap;
+  }
+
+  function appendMessage(msg, shouldScroll = true) {
+    if (!msg) return;
+    const box = document.getElementById("chatBox");
+    if (msg.id && box.querySelector(`[data-message-id="${msg.id}"]`)) return;
+    box.appendChild(buildMessageElement(msg));
+    if (shouldScroll) box.scrollTop = box.scrollHeight;
+  }
+
+  function replaceMessage(msg) {
+    if (!msg) return;
+    const box = document.getElementById("chatBox");
+    const old = msg.id ? box.querySelector(`[data-message-id="${msg.id}"]`) : null;
+    const next = buildMessageElement(msg);
+    if (old) old.replaceWith(next);
+    else box.appendChild(next);
+  }
+
   async function loadChat() {
-    const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: true });
+    const { data, error } = await sb.from("messages")
+      .select("*")
+      .order("created_at", { ascending: true });
     if (error) return;
     const box = document.getElementById("chatBox");
     box.innerHTML = "";
-    data.forEach(msg => {
-      const wrap = document.createElement("div");
-      wrap.className = "bubble-wrap " + (msg.sender === CURRENT_USER ? "me" : "them");
-
-      const b = document.createElement("div");
-      b.className = "bubble " + (msg.sender === CURRENT_USER ? "me" : "them");
-
-      if (msg.reply_preview) {
-        const quote = document.createElement("div");
-        quote.className = "reply-quote";
-        quote.textContent = msg.reply_preview;
-        b.appendChild(quote);
-      }
-
-      if ((msg.type === "sketch" || msg.type === "photo") && msg.sketch_data) {
-        const img = document.createElement("img");
-        img.src = msg.sketch_data;
-        img.addEventListener("click", (e) => { e.stopPropagation(); openPreview(msg.sketch_data); });
-        b.appendChild(img);
-      } else if (msg.type === "voice" && msg.sketch_data) {
-        const audio = document.createElement("audio");
-        audio.src = msg.sketch_data;
-        audio.controls = true;
-        audio.style.maxWidth = "200px";
-        b.appendChild(audio);
-      } else {
-        const textSpan = document.createElement("span");
-        textSpan.textContent = msg.text_body || "";
-        b.appendChild(textSpan);
-      }
-      wrap.appendChild(b);
-
-      const reactions = msg.reactions || {};
-      const reactionRow = document.createElement("div");
-      reactionRow.className = "reaction-row";
-      Object.entries(reactions).forEach(([emoji, users]) => {
-        if (users.length === 0) return;
-        const pill = document.createElement("span");
-        pill.className = "reaction-pill";
-        pill.textContent = `${emoji} ${users.length}`;
-        reactionRow.appendChild(pill);
-      });
-      wrap.appendChild(reactionRow);
-
-      const picker = document.createElement("div");
-      picker.className = "react-picker";
-      REACT_EMOJIS.forEach(emoji => {
-        const span = document.createElement("span");
-        span.textContent = emoji;
-        span.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          const current = msg.reactions || {};
-          const list = current[emoji] || [];
-          if (!list.includes(CURRENT_USER)) list.push(CURRENT_USER);
-          current[emoji] = list;
-          await sb.from("messages").update({ reactions: current }).eq("id", msg.id);
-          picker.classList.remove("open");
-          loadChat();
-        });
-        picker.appendChild(span);
-      });
-      wrap.appendChild(picker);
-      b.addEventListener("click", (e) => {
-        if (e.target.tagName === "IMG") return;
-        picker.classList.toggle("open");
-      });
-
-      const meta = document.createElement("div");
-      meta.className = "msg-meta";
-      meta.textContent = timeAgoLabel(msg.created_at) + (msg.edited ? " (edited)" : "");
-
-      if (msg.sender === CURRENT_USER) {
-        const editBtn = document.createElement("span");
-        editBtn.textContent = " ✎";
-        editBtn.style.cursor = "pointer";
-        editBtn.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          if (msg.type !== "text") return;
-          const newText = prompt("edit message:", msg.text_body);
-          if (newText === null || newText.trim() === "") return;
-          await sb.from("messages").update({ text_body: newText.trim(), edited: true }).eq("id", msg.id);
-          loadChat();
-        });
-
-        const delBtn = document.createElement("span");
-        delBtn.textContent = " 🗑️";
-        delBtn.style.cursor = "pointer";
-        delBtn.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          if (!confirm("delete this message?")) return;
-          await sb.from("messages").delete().eq("id", msg.id);
-          loadChat();
-        });
-
-        meta.appendChild(editBtn);
-        meta.appendChild(delBtn);
-      }
-
-      wrap.appendChild(meta);
-      attachSwipe(wrap, msg);
-      box.appendChild(wrap);
-    });
+    data.forEach(msg => appendMessage(msg, false));
     box.scrollTop = box.scrollHeight;
   }
 
-  document.getElementById("sendChatBtn").addEventListener("click", async () => {
+  async function sendChatMessage() {
     const input = document.getElementById("chatInput");
     const text = input.value.trim();
     if (!text) return;
+
     const payload = { sender: CURRENT_USER, type: "text", text_body: text };
     if (replyingTo) {
       const senderLabel = replyingTo.sender === CURRENT_USER ? "You" : document.getElementById("chatPartnerName").textContent;
       payload.reply_preview = `${senderLabel}: ${replyingTo.preview}`;
     }
-    await sb.from("messages").insert(payload);
+
+    // Clear the composer immediately so the UI feels instant.
     input.value = "";
     replyingTo = null;
     document.getElementById("replyBar").classList.remove("open");
-    touchPresence(false);
-    loadChat();
+    isTypingLocally = false;
+    clearTimeout(typingTimeout);
+    touchPresence(false, true);
+
+    const { data, error } = await sb.from("messages").insert(payload).select("*").single();
+    if (error) {
+      document.getElementById("status").textContent = "message failed to send 😕";
+      return;
+    }
+    appendMessage(data);
+  }
+
+  document.getElementById("sendChatBtn").addEventListener("click", sendChatMessage);
+  document.getElementById("chatInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendChatMessage();
   });
 
   const modal = document.getElementById("sketchModal");
@@ -679,9 +752,9 @@
   document.getElementById("clearSketchBtn").addEventListener("click", clearCanvas);
   document.getElementById("sendSketchBtn").addEventListener("click", async () => {
     const dataUrl = canvas.toDataURL("image/png");
-    await sb.from("messages").insert({ sender: CURRENT_USER, type: "sketch", sketch_data: dataUrl });
+    const { data } = await sb.from("messages").insert({ sender: CURRENT_USER, type: "sketch", sketch_data: dataUrl }).select("*").single();
     modal.classList.remove("open");
-    loadChat();
+    appendMessage(data);
   });
 
   const FILTERS = [
@@ -745,10 +818,10 @@
       const { error: uploadError } = await sb.storage.from("photos").upload(fileName, blob);
       if (uploadError) { document.getElementById("status").textContent = "upload failed 😕"; return; }
       const { data: urlData } = sb.storage.from("photos").getPublicUrl(fileName);
-      await sb.from("messages").insert({ sender: CURRENT_USER, type: "photo", sketch_data: urlData.publicUrl });
+      const { data } = await sb.from("messages").insert({ sender: CURRENT_USER, type: "photo", sketch_data: urlData.publicUrl }).select("*").single();
       document.getElementById("status").textContent = "photo sent 📷";
       filterModal.classList.remove("open");
-      loadChat();
+      appendMessage(data);
     }, "image/png");
   });
 
@@ -771,9 +844,9 @@
           const { error } = await sb.storage.from("photos").upload(fileName, blob);
           if (error) { document.getElementById("status").textContent = "upload failed 😕"; return; }
           const { data: urlData } = sb.storage.from("photos").getPublicUrl(fileName);
-          await sb.from("messages").insert({ sender: CURRENT_USER, type: "voice", sketch_data: urlData.publicUrl });
+          const { data } = await sb.from("messages").insert({ sender: CURRENT_USER, type: "voice", sketch_data: urlData.publicUrl }).select("*").single();
           document.getElementById("status").textContent = "voice note sent 🎤";
-          loadChat();
+          appendMessage(data);
         };
         mediaRecorder.start();
         isRecording = true;
@@ -1201,18 +1274,46 @@
   loadTapRace();
   loadMemories();
 
-  setInterval(updateClocks, 1000);
-  setInterval(() => touchPresence(document.getElementById("chatInput") === document.activeElement), 10000);
+  // The clock only displays minutes, so there is no need to update it every second.
+  setInterval(updateClocks, 30000);
+
+  // Lightweight presence heartbeat instead of a database write every 10 seconds.
+  setInterval(() => {
+    if (document.visibilityState === "visible") {
+      touchPresence(isTypingLocally, true);
+    }
+  }, 30000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      touchPresence(isTypingLocally, true);
+      loadPresence();
+    }
+  });
 
   if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js"); }
 
   sb.channel("room1")
-    .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, loadChat)
+    .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (payload) => {
+      if (payload.eventType === "INSERT") {
+        appendMessage(payload.new);
+      } else if (payload.eventType === "UPDATE") {
+        replaceMessage(payload.new);
+      } else if (payload.eventType === "DELETE") {
+        const old = payload.old;
+        const el = old?.id ? document.querySelector(`[data-message-id="${old.id}"]`) : null;
+        if (el) el.remove();
+      }
+    })
     .on("postgres_changes", { event: "*", schema: "public", table: "hugs" }, checkForHugs)
     .on("postgres_changes", { event: "*", schema: "public", table: "mood_entries" }, loadPartnerMood)
     .on("postgres_changes", { event: "*", schema: "public", table: "tictactoe" }, loadGame)
     .on("postgres_changes", { event: "*", schema: "public", table: "tap_race" }, loadTapRace)
-    .on("postgres_changes", { event: "*", schema: "public", table: "presence" }, loadPresence)
+    .on("postgres_changes", { event: "*", schema: "public", table: "presence" }, (payload) => {
+      if (payload.new && payload.new.user_name === partnerOf(CURRENT_USER)) {
+        renderPresence(payload.new);
+      }
+    })
     .subscribe();
 </script>
 
