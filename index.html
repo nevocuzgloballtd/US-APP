@@ -325,7 +325,16 @@
   }
   async function verifyHash(hash) {
     const { data, error } = await sb.rpc("check_app_password", { p_hash: hash });
-    return !error && data === true;
+
+    console.log("PASSWORD CHECK:", { hash, data, error });
+
+    if (error) {
+      document.getElementById("lockError").textContent =
+        "Supabase error: " + error.message;
+      return false;
+    }
+
+    return data === true;
   }
   function unlockApp() {
     document.getElementById("lockScreen").style.display = "none";
